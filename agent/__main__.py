@@ -6,6 +6,11 @@ from agent.helpers import User, get_user_from_db
 
 app = FastAPI()
 
+
+@app.get("/")
+def read_root() -> dict[str, str]:
+    return {}
+
 @app.post(path="/agent/init")
 async def init(request: Request) -> Dict[str, Any]:
     request_body = await request.json()
