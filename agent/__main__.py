@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request
 import requests
 from typing import Literal, Any, Dict, Union
 
-from agent.helpers import User, get_user_from_db
+from agent.helpers import User, get_user_from_db, save_user
 
 app = FastAPI()
 
@@ -18,11 +18,23 @@ async def init(request: Request) -> Dict[str, Any]:
     user: User | None = get_user_from_db(phone_number=caller_id)
     
     if not user:
+
+        new_user: User = {
+            "name": "new_user",
+            "phone_number": caller_id
+        }
+        
+        # Save the new user to the database
+        save_user(user=new_user)
+
         print("hello world")
-        return {"dynamic_variables": {}
+        return {"dynamic_variables": {
+            "name": "Test", 
+            "phone_number": caller_id}
             
             }
-    
+
+
     output: Dict[str, Any] = {
         "dynamic_variables": {
             "name": user['name'],

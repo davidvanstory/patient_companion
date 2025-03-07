@@ -2,7 +2,9 @@ from typing import TypedDict, Any
 import os
 from dotenv import load_dotenv
 from pymongo import DESCENDING, MongoClient
+from pymongo.results import InsertOneResult
 import requests
+
 
 _ = load_dotenv()
 
@@ -16,6 +18,12 @@ class User(TypedDict):
     phone_number: str
     name: str
 
+def save_user(user: User) -> bool:
+    result: InsertOneResult = callers_collection.insert_one(document=user)
+    if result.inserted_id:
+        return True
+    else:
+        return False
 
 def get_user_from_db(phone_number: str) -> User | None:
     
