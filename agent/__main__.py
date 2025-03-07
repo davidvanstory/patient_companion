@@ -26,5 +26,5 @@ async def init(request: Request) -> Dict[str, Any]:
             "phone_number": user['phone_number'],
         }
     }
-    
+    print(output)
     return output
