@@ -18,7 +18,8 @@ async def init(request: Request) -> Dict[str, Any]:
     user: User | None = get_user_from_db(phone_number=caller_id)
     
     if not user:
-        return {"note": "That caller doesn't exist"}
+        print("hello world")
+        return {}
     
     output: Dict[str, Any] = {
         "dynamic_variables": {
