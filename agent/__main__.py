@@ -19,9 +19,9 @@ async def init(request: Request) -> Dict[str, Any]:
     
     if not user:
         print("hello world")
-        return {"dynamic_variables": {
-            "name": "David",
-            "phone_number": "123",}}
+        return {"dynamic_variables": {}
+            
+            }
     
     output: Dict[str, Any] = {
         "dynamic_variables": {
