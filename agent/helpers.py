@@ -11,7 +11,7 @@ _ = load_dotenv()
 # MONGO_URI: str | None = os.getenv("MONGODB_URI") 
 MONGO_URI = os.getenv("MONGODB_URI")  # Remove type annotation   
 client = MongoClient(MONGO_URI)
-db = client['eleven_labs_assistant']
+db = client['patient_companion_assistant']
 callers_collection = db['callers']
 symptoms_collection = db['symptoms']
 
