@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request
 import requests
 from typing import Literal, Any, Dict, Union
 
-from agent.helpers import User, get_user_from_db, save_user
+from agent.helpers import User, get_user_from_db, save_user, save_symptom, get_symptom_from_db, search_patient_query
 
 app = FastAPI()
 
@@ -43,3 +43,31 @@ async def init(request: Request) -> Dict[str, Any]:
     }
     print(output)
     return output
+
+@app.post("/agent/take-symptom")
+async def take_symptom(request: Request) -> dict[str, str]:
+    request_body = await request.json()
+    if save_symptom(request_body['symptom']):
+        return {"status": "success"}
+    else:
+        return {"status": "error"}
+    
+
+@app.get("/agent/get-symptom")
+async def get_symptom(request: Request) -> dict[str, str]:
+    note = get_symptom_from_db()
+    print("got note:", note)
+    return {
+        "note": note
+    }
+
+#append-symptom route here
+
+@app.post("/agent/search")
+async def search(request: Request) -> dict[str, str]:
+    request_body = await request.json()
+    result = search_patient_query(request_body['search_query'])
+    return {
+        "result": result
+    }
+
