@@ -54,11 +54,20 @@ async def init(request: Request) -> Dict[str, Any]:
 @app.post("/agent/update-name")
 async def update_name(request: Request) -> dict[str, str]:
     try:
+        # Log that the endpoint was called
+        print("update-name endpoint called")
+        
+        # Get raw request body for debugging
+        raw_body = await request.body()
+        print(f"Raw request body: {raw_body}")
+        
         # Parse the request body
         request_body = await request.json()
+        print(f"Parsed request body: {request_body}")
         
         # Check for required fields
         if 'caller_id' not in request_body or 'name' not in request_body:
+            print("Error: Missing required fields in request")
             return {
                 "status": "error", 
                 "message": "Missing required fields: caller_id and name are required"
@@ -67,32 +76,47 @@ async def update_name(request: Request) -> dict[str, str]:
         caller_id = request_body['caller_id']
         new_name = request_body['name']
         
+        print(f"Extracted fields - caller_id: '{caller_id}', name: '{new_name}'")
+        
         # Validate inputs
         if not caller_id or not isinstance(caller_id, str):
+            print(f"Error: Invalid caller_id format: {type(caller_id)}")
             return {"status": "error", "message": "Invalid caller_id format"}
             
         if not new_name or not isinstance(new_name, str):
+            print(f"Error: Invalid name format: {type(new_name)}")
             return {"status": "error", "message": "Invalid name format"}
         
-        # Log for debugging
-        print(f"Updating name for caller {caller_id} to {new_name}")
+        # Check if user exists before update
+        existing_user = get_user_from_db(phone_number=caller_id)
+        print(f"Existing user lookup result: {existing_user}")
         
         # Try to update the user's name
-        if update_user_name(caller_id, new_name):
+        print(f"Calling update_user_name({caller_id}, {new_name})")
+        update_result = update_user_name(caller_id, new_name)
+        print(f"update_user_name result: {update_result}")
+        
+        if update_result:
+            # Verify the update by retrieving the user again
+            updated_user = get_user_from_db(phone_number=caller_id)
+            print(f"User after update: {updated_user}")
             return {"status": "success", "message": f"Name updated to {new_name}"}
         else:
             # If update fails, try to create a new user
-            user = get_user_from_db(phone_number=caller_id)
-            if not user:
-                new_user = {
-                    "name": new_name,
-                    "phone_number": caller_id
-                }
+            print("Update failed, attempting to create new user")
+            new_user = {
+                "name": new_name,
+                "phone_number": caller_id
+            }
+            
+            print(f"Calling save_user with {new_user}")
+            save_result = save_user(user=new_user)
+            print(f"save_user result: {save_result}")
+            
+            if save_result:
+                return {"status": "success", "message": f"New user created with name {new_name}"}
                 
-                if save_user(user=new_user):
-                    return {"status": "success", "message": f"New user created with name {new_name}"}
-                    
-            return {"status": "error", "message": "Failed to update user name"}
+            return {"status": "error", "message": "Failed to update or create user"}
             
     except Exception as e:
         import traceback

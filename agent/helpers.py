@@ -62,31 +62,61 @@ def update_user_name(phone_number: str, name: str) -> bool:
     """
     try:
         # Log the operation for debugging
-        logger.info(f"Attempting to update name for user with phone number: {phone_number}")
+        print(f"update_user_name called with phone_number: '{phone_number}', name: '{name}'")
+        
+        # Verify MongoDB connection is still alive
+        try:
+            client.admin.command('ping')
+            print("MongoDB connection is alive")
+        except Exception as e:
+            print(f"MongoDB connection test failed: {e}")
+            return False
+        
+        # Verify the collection exists
+        db_list = client.list_database_names()
+        print(f"Available databases: {db_list}")
+        
+        if 'patient_companion_assistant' in db_list:
+            collections = db['patient_companion_assistant'].list_collection_names()
+            print(f"Collections in patient_companion_assistant: {collections}")
+        
+        # Check if user exists before attempting update
+        existing_user = callers_collection.find_one({"phone_number": phone_number})
+        print(f"Existing user before update: {existing_user}")
         
         # Find and update the user document
+        print(f"Executing update_one with filter: {{'phone_number': '{phone_number}'}} and update: {{'$set': {{'name': '{name}'}}}}")
+        
         result = callers_collection.update_one(
             {"phone_number": phone_number},
             {"$set": {"name": name}}
         )
         
+        # Log the update result
+        print(f"update_one result - matched_count: {result.matched_count}, modified_count: {result.modified_count}")
+        
         # Check if the update was successful
         if result.matched_count > 0:
-            logger.info(f"Successfully updated name for user: {phone_number} to {name}")
+            print(f"Match found for phone_number: {phone_number}")
+            
             if result.modified_count > 0:
-                logger.info(f"Document was modified")
+                print(f"Document was modified with new name: {name}")
             else:
-                logger.info(f"Document matched but no changes were needed")
+                print(f"Document matched but no changes were needed (name may already be '{name}')")
+                
+            # Verify the update by retrieving the user again
+            updated_user = callers_collection.find_one({"phone_number": phone_number})
+            print(f"User document after update: {updated_user}")
+            
             return True
         else:
-            logger.warning(f"No user found with phone number: {phone_number}")
+            print(f"No user found with phone_number: {phone_number}")
             return False
             
-    except PyMongoError as e:
-        logger.error(f"MongoDB error while updating user name: {e}")
-        return False
     except Exception as e:
-        logger.error(f"Unexpected error while updating user name: {e}")
+        import traceback
+        print(f"Exception in update_user_name: {str(e)}")
+        print(traceback.format_exc())
         return False
 
 def get_user_from_db(phone_number: str) -> User | None:
