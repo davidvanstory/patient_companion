@@ -3,7 +3,7 @@ import requests
 from typing import Literal, Any, Dict, Union
 import logging
 
-from agent.helpers import User, get_user_from_db, save_user, save_symptom, get_symptom_from_db, search_patient_query
+from agent.helpers import User, get_user_from_db, save_user, save_symptom, get_symptom_from_db, search_patient_query, update_user_name
 
 app = FastAPI()
 
@@ -49,6 +49,56 @@ async def init(request: Request) -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"Error in init endpoint: {str(e)}")
         return {"status": "error", "message": "Server error"}
+
+
+@app.post("/agent/update-name")
+async def update_name(request: Request) -> dict[str, str]:
+    try:
+        # Parse the request body
+        request_body = await request.json()
+        
+        # Check for required fields
+        if 'caller_id' not in request_body or 'name' not in request_body:
+            return {
+                "status": "error", 
+                "message": "Missing required fields: caller_id and name are required"
+            }
+        
+        caller_id = request_body['caller_id']
+        new_name = request_body['name']
+        
+        # Validate inputs
+        if not caller_id or not isinstance(caller_id, str):
+            return {"status": "error", "message": "Invalid caller_id format"}
+            
+        if not new_name or not isinstance(new_name, str):
+            return {"status": "error", "message": "Invalid name format"}
+        
+        # Log for debugging
+        print(f"Updating name for caller {caller_id} to {new_name}")
+        
+        # Try to update the user's name
+        if update_user_name(caller_id, new_name):
+            return {"status": "success", "message": f"Name updated to {new_name}"}
+        else:
+            # If update fails, try to create a new user
+            user = get_user_from_db(phone_number=caller_id)
+            if not user:
+                new_user = {
+                    "name": new_name,
+                    "phone_number": caller_id
+                }
+                
+                if save_user(user=new_user):
+                    return {"status": "success", "message": f"New user created with name {new_name}"}
+                    
+            return {"status": "error", "message": "Failed to update user name"}
+            
+    except Exception as e:
+        import traceback
+        print(f"Exception in update_name endpoint: {str(e)}")
+        print(traceback.format_exc())
+        return {"status": "error", "message": f"Server error: {str(e)}"}
 
 @app.post("/agent/take-symptom")
 async def take_symptom(request: Request) -> dict[str, str]:

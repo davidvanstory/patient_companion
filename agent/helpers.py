@@ -48,6 +48,46 @@ def save_user(user: User) -> bool:
     except PyMongoError as e:
         logger.error(f"MongoDB error while saving user: {e}")
         return False
+    
+def update_user_name(phone_number: str, name: str) -> bool:
+    """
+    Updates the name of an existing user identified by phone_number.
+    
+    Args:
+        phone_number (str): The phone number of the user to update
+        name (str): The new name to save for the user
+        
+    Returns:
+        bool: True if update was successful, False otherwise
+    """
+    try:
+        # Log the operation for debugging
+        logger.info(f"Attempting to update name for user with phone number: {phone_number}")
+        
+        # Find and update the user document
+        result = callers_collection.update_one(
+            {"phone_number": phone_number},
+            {"$set": {"name": name}}
+        )
+        
+        # Check if the update was successful
+        if result.matched_count > 0:
+            logger.info(f"Successfully updated name for user: {phone_number} to {name}")
+            if result.modified_count > 0:
+                logger.info(f"Document was modified")
+            else:
+                logger.info(f"Document matched but no changes were needed")
+            return True
+        else:
+            logger.warning(f"No user found with phone number: {phone_number}")
+            return False
+            
+    except PyMongoError as e:
+        logger.error(f"MongoDB error while updating user name: {e}")
+        return False
+    except Exception as e:
+        logger.error(f"Unexpected error while updating user name: {e}")
+        return False
 
 def get_user_from_db(phone_number: str) -> User | None:
     try:
