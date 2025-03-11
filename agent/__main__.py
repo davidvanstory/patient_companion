@@ -22,15 +22,16 @@ def read_root() -> dict[str, str]:
 async def init(request: Request) -> Dict[str, Any]:
     try:
         request_body = await request.json()
+        logger.info(f"Init request body: {request_body}")
+        
         caller_id = request_body['caller_id']
         logger.info(f"Initializing user with caller_id: {caller_id}")
         
         user: User | None = get_user_from_db(phone_number=caller_id)
         
         if not user:
-            # Important: Use the same name in both database and response
-            # This prevents confusion and keeps everything in sync
-            initial_name = "new_user"  # You can change this if needed
+            # Use a consistent name in both database and response
+            initial_name = "new_user"  # This will be updated later when they give their name
             
             new_user: User = {
                 "name": initial_name,
@@ -49,21 +50,17 @@ async def init(request: Request) -> Dict[str, Any]:
                 return {"status": "error", "message": "Failed to create user"}
         
         # User exists, return their actual stored name
-        output: Dict[str, Any] = {
-            "dynamic_variables": {
-                "name": user['name'],
-                "phone_number": user['phone_number'],
-            }
-        }
         logger.info(f"Existing user found: {user['phone_number']} with name: {user['name']}")
-        return output
+        return {"dynamic_variables": {
+            "name": user['name'],
+            "phone_number": user['phone_number'],
+        }}
     except Exception as e:
         logger.error(f"Error in init endpoint: {str(e)}")
         return {"status": "error", "message": f"Server error: {str(e)}"}
 
-
 @app.post("/agent/update-name")
-async def update_name(request: Request) -> dict[str, str]:
+async def update_name(request: Request) -> Dict[str, Any]:  # Changed return type to Dict[str, Any]
     try:
         # Log that the endpoint was called
         logger.info("update-name endpoint called")
@@ -148,14 +145,10 @@ async def update_name(request: Request) -> dict[str, str]:
         
         # --- Return appropriate response ---
         if success:
-            # Return dynamic_variables to match what the voice agent expects
+            # Fix: Return dynamic_variables as a string to match expected return type
             return {
                 "status": "success", 
-                "message": f"Name updated to {new_name}",
-                "dynamic_variables": {
-                    "name": new_name,
-                    "phone_number": caller_id
-                }
+                "message": f"Name updated to {new_name}"
             }
         else:
             return {"status": "error", "message": "Failed to update name"}
