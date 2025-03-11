@@ -23,103 +23,147 @@ async def init(request: Request) -> Dict[str, Any]:
     try:
         request_body = await request.json()
         caller_id = request_body['caller_id']
+        logger.info(f"Initializing user with caller_id: {caller_id}")
+        
         user: User | None = get_user_from_db(phone_number=caller_id)
         
         if not user:
+            # Important: Use the same name in both database and response
+            # This prevents confusion and keeps everything in sync
+            initial_name = "new_user"  # You can change this if needed
+            
             new_user: User = {
-                "name": "new_user",
+                "name": initial_name,
                 "phone_number": caller_id
             }
+            
             # Save the new user to the database
             if save_user(user=new_user):
-                logger.info(f"New user created: {caller_id}")
+                logger.info(f"New user created: {caller_id} with name: {initial_name}")
                 return {"dynamic_variables": {
-                    "name": "Test", 
-                    "phone_number": caller_id}
-                }
+                    "name": initial_name,  # Use the same name as stored in DB
+                    "phone_number": caller_id
+                }}
             else:
                 logger.error(f"Failed to save new user: {caller_id}")
                 return {"status": "error", "message": "Failed to create user"}
         
+        # User exists, return their actual stored name
         output: Dict[str, Any] = {
             "dynamic_variables": {
                 "name": user['name'],
                 "phone_number": user['phone_number'],
             }
         }
-        logger.info(f"User found: {output}")
+        logger.info(f"Existing user found: {user['phone_number']} with name: {user['name']}")
         return output
     except Exception as e:
         logger.error(f"Error in init endpoint: {str(e)}")
-        return {"status": "error", "message": "Server error"}
+        return {"status": "error", "message": f"Server error: {str(e)}"}
 
 
 @app.post("/agent/update-name")
 async def update_name(request: Request) -> dict[str, str]:
     try:
         # Log that the endpoint was called
-        print("update-name endpoint called")
+        logger.info("update-name endpoint called")
         
         # Parse the request body
         request_body = await request.json()
-        print(f"Parsed request body: {request_body}")
+        logger.info(f"Parsed request body: {request_body}")
         
-        # Extract caller_id from Request header (if your voice agent sets it)
-        caller_id = request.headers.get("X-Caller-ID")
+        # --- First, try to get caller_id from different sources ---
+        caller_id = None
         
-        # If not in header, try to get from query parameters
+        # 1. Try request body
+        if 'caller_id' in request_body:
+            caller_id = request_body['caller_id']
+            logger.info(f"Found caller_id in request body: {caller_id}")
+        
+        # 2. Try headers
+        if not caller_id:
+            caller_id = request.headers.get("X-Caller-ID")
+            if caller_id:
+                logger.info(f"Found caller_id in headers: {caller_id}")
+        
+        # 3. Try query params
         if not caller_id:
             caller_id = request.query_params.get("caller_id")
-            
-        # If still not found, use default value or error
+            if caller_id:
+                logger.info(f"Found caller_id in query params: {caller_id}")
+        
+        # 4. Last resort: get the most recent caller
         if not caller_id:
-            print("Warning: No caller_id found in request, headers, or query parameters")
-            # You can either:
-            # 1. Return an error:
-            # return {"status": "error", "message": "Missing caller_id"}
-            # 2. Or use the most recent caller from the database:
+            logger.warning("No caller_id found in request sources")
             latest_user = callers_collection.find_one(sort=[("_id", -1)])
             if latest_user:
                 caller_id = latest_user.get("phone_number")
-                print(f"Using most recent caller: {caller_id}")
+                logger.info(f"Using most recent caller: {caller_id}")
             else:
-                return {"status": "error", "message": "No callers in database and no caller_id provided"}
+                logger.error("No callers in database and no caller_id provided")
+                return {"status": "error", "message": "Missing caller_id and no recent callers found"}
         
-        # Get name from request body
+        # --- Next, get the name to update ---
         if 'name' not in request_body:
+            logger.error("Missing name parameter in request")
             return {"status": "error", "message": "Missing name parameter"}
         
         new_name = request_body['name']
-        print(f"Updating name for caller {caller_id} to {new_name}")
+        logger.info(f"Updating name for caller {caller_id} to {new_name}")
         
-        # Check if user exists
+        # --- Now handle the database update ---
         user = get_user_from_db(phone_number=caller_id)
         
         if user:
+            # Log the current state
+            logger.info(f"Found existing user with name: {user.get('name')}")
+            
             # Update existing user
             result = callers_collection.update_one(
                 {"phone_number": caller_id},
                 {"$set": {"name": new_name}}
             )
-            success = result.modified_count > 0
+            
+            success = result.acknowledged
+            if success:
+                logger.info(f"Successfully updated user {caller_id} name to {new_name}")
+                if result.modified_count == 0:
+                    logger.info("Note: No document changes were needed (name might be the same)")
+            else:
+                logger.error(f"Failed to update user {caller_id}")
         else:
             # Create new user
+            logger.info(f"No existing user found for {caller_id}, creating new user")
             new_user = {
                 "name": new_name,
                 "phone_number": caller_id
             }
             result = callers_collection.insert_one(new_user)
-            success = result.inserted_id is not None
+            success = result.acknowledged
+            
+            if success:
+                logger.info(f"Created new user with ID: {result.inserted_id}")
+            else:
+                logger.error(f"Failed to create new user for {caller_id}")
         
+        # --- Return appropriate response ---
         if success:
-            return {"status": "success", "message": f"Name updated to {new_name}"}
+            # Return dynamic_variables to match what the voice agent expects
+            return {
+                "status": "success", 
+                "message": f"Name updated to {new_name}",
+                "dynamic_variables": {
+                    "name": new_name,
+                    "phone_number": caller_id
+                }
+            }
         else:
             return {"status": "error", "message": "Failed to update name"}
     
     except Exception as e:
         import traceback
-        print(f"Exception in update_name endpoint: {str(e)}")
-        print(traceback.format_exc())
+        logger.error(f"Exception in update_name endpoint: {str(e)}")
+        logger.error(traceback.format_exc())
         return {"status": "error", "message": f"Server error: {str(e)}"}
 
 @app.post("/agent/take-symptom")
