@@ -60,67 +60,62 @@ async def update_name(request: Request) -> dict[str, str]:
         # Log that the endpoint was called
         print("update-name endpoint called")
         
-        # Get raw request body for debugging
-        raw_body = await request.body()
-        print(f"Raw request body: {raw_body}")
-        
         # Parse the request body
         request_body = await request.json()
         print(f"Parsed request body: {request_body}")
         
-        # Check for required fields
-        if 'caller_id' not in request_body or 'name' not in request_body:
-            print("Error: Missing required fields in request")
-            return {
-                "status": "error", 
-                "message": "Missing required fields: caller_id and name are required"
-            }
+        # Extract caller_id from Request header (if your voice agent sets it)
+        caller_id = request.headers.get("X-Caller-ID")
         
-        caller_id = request_body['caller_id']
-        new_name = request_body['name']
-        
-        print(f"Extracted fields - caller_id: '{caller_id}', name: '{new_name}'")
-        
-        # Validate inputs
-        if not caller_id or not isinstance(caller_id, str):
-            print(f"Error: Invalid caller_id format: {type(caller_id)}")
-            return {"status": "error", "message": "Invalid caller_id format"}
+        # If not in header, try to get from query parameters
+        if not caller_id:
+            caller_id = request.query_params.get("caller_id")
             
-        if not new_name or not isinstance(new_name, str):
-            print(f"Error: Invalid name format: {type(new_name)}")
-            return {"status": "error", "message": "Invalid name format"}
+        # If still not found, use default value or error
+        if not caller_id:
+            print("Warning: No caller_id found in request, headers, or query parameters")
+            # You can either:
+            # 1. Return an error:
+            # return {"status": "error", "message": "Missing caller_id"}
+            # 2. Or use the most recent caller from the database:
+            latest_user = callers_collection.find_one(sort=[("_id", -1)])
+            if latest_user:
+                caller_id = latest_user.get("phone_number")
+                print(f"Using most recent caller: {caller_id}")
+            else:
+                return {"status": "error", "message": "No callers in database and no caller_id provided"}
         
-        # Check if user exists before update
-        existing_user = get_user_from_db(phone_number=caller_id)
-        print(f"Existing user lookup result: {existing_user}")
+        # Get name from request body
+        if 'name' not in request_body:
+            return {"status": "error", "message": "Missing name parameter"}
         
-        # Try to update the user's name
-        print(f"Calling update_user_name({caller_id}, {new_name})")
-        update_result = update_user_name(caller_id, new_name)
-        print(f"update_user_name result: {update_result}")
+        new_name = request_body['name']
+        print(f"Updating name for caller {caller_id} to {new_name}")
         
-        if update_result:
-            # Verify the update by retrieving the user again
-            updated_user = get_user_from_db(phone_number=caller_id)
-            print(f"User after update: {updated_user}")
-            return {"status": "success", "message": f"Name updated to {new_name}"}
+        # Check if user exists
+        user = get_user_from_db(phone_number=caller_id)
+        
+        if user:
+            # Update existing user
+            result = callers_collection.update_one(
+                {"phone_number": caller_id},
+                {"$set": {"name": new_name}}
+            )
+            success = result.modified_count > 0
         else:
-            # If update fails, try to create a new user
-            print("Update failed, attempting to create new user")
+            # Create new user
             new_user = {
                 "name": new_name,
                 "phone_number": caller_id
             }
-            
-            print(f"Calling save_user with {new_user}")
-            save_result = save_user(user=new_user)
-            print(f"save_user result: {save_result}")
-            
-            if save_result:
-                return {"status": "success", "message": f"New user created with name {new_name}"}
-                
-            return {"status": "error", "message": "Failed to update or create user"}
-            
+            result = callers_collection.insert_one(new_user)
+            success = result.inserted_id is not None
+        
+        if success:
+            return {"status": "success", "message": f"Name updated to {new_name}"}
+        else:
+            return {"status": "error", "message": "Failed to update name"}
+    
     except Exception as e:
         import traceback
         print(f"Exception in update_name endpoint: {str(e)}")
@@ -170,50 +165,3 @@ async def search(request: Request) -> dict[str, str]:
         "result": result
     }
 
-@app.get("/test-update-name/{phone_number}/{name}")
-async def test_update_name(phone_number: str, name: str):
-    """Simple endpoint to test name updates using URL parameters"""
-    try:
-        # Print debug info
-        print(f"test-update-name called for phone: {phone_number}, name: {name}")
-        
-        # Check if user exists
-        user = get_user_from_db(phone_number=phone_number)
-        user_existed = user is not None
-        if user_existed:
-            print(f"Found existing user: {user}")
-        else:
-            print(f"No existing user found for phone: {phone_number}")
-        
-        # Attempt to update or create user
-        if user_existed:
-            # Update existing user's name in MongoDB
-            result = callers_collection.update_one(
-                {"phone_number": phone_number},
-                {"$set": {"name": name}}
-            )
-            print(f"Update result - matched: {result.matched_count}, modified: {result.modified_count}")
-            success = result.modified_count > 0
-        else:
-            # Create new user
-            new_user = {
-                "name": name,
-                "phone_number": phone_number
-            }
-            result = callers_collection.insert_one(new_user)
-            print(f"Insert result - inserted_id: {result.inserted_id}")
-            success = result.inserted_id is not None
-        
-        # Fetch the user after update to verify
-        updated_user = get_user_from_db(phone_number=phone_number)
-        print(f"User after operation: {updated_user}")
-        
-        return {
-            "success": success,
-            "existed_before": user_existed,
-            "user_before": user,
-            "user_after": updated_user
-        }
-    except Exception as e:
-        print(f"Error in test-update-name: {str(e)}")
-        return {"success": False, "error": str(e)}
