@@ -46,11 +46,30 @@ async def init(request: Request) -> Dict[str, Any]:
 
 @app.post("/agent/take-symptom")
 async def take_symptom(request: Request) -> dict[str, str]:
-    request_body = await request.json()
-    if save_symptom(request_body['symptom']):
-        return {"status": "success"}
-    else:
-        return {"status": "error"}
+    try:
+        request_body = await request.json()
+        
+        # Check if 'symptom' key exists in the request
+        if 'symptom' not in request_body:
+            return {"status": "error", "message": "Missing 'symptom' field in request"}
+            
+        # Validate symptom data
+        symptom = request_body['symptom']
+        if not symptom or not isinstance(symptom, str):
+            return {"status": "error", "message": f"Invalid symptom format: {symptom}"}
+        
+        # Log the symptom for debugging
+        print(f"Received symptom: {symptom}")
+        
+        # Try to save the symptom
+        if save_symptom(symptom):
+            return {"status": "success", "message": "Symptom saved successfully"}
+        else:
+            return {"status": "error", "message": "Failed to save symptom to database"}
+            
+    except Exception as e:
+        print(f"Error in take_symptom endpoint: {str(e)}")
+        return {"status": "error", "message": f"Server error: {str(e)}"}
     
 
 @app.get("/agent/get-symptom")
