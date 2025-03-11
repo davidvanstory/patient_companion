@@ -3,7 +3,10 @@ import requests
 from typing import Literal, Any, Dict, Union
 import logging
 
-from agent.helpers import User, get_user_from_db, save_user, save_symptom, get_symptom_from_db, search_patient_query, update_user_name
+from agent.helpers import (
+    User, get_user_from_db, save_user, save_symptom, get_symptom_from_db, 
+    search_patient_query, update_user_name, callers_collection
+)
 
 app = FastAPI()
 
@@ -167,3 +170,50 @@ async def search(request: Request) -> dict[str, str]:
         "result": result
     }
 
+@app.get("/test-update-name/{phone_number}/{name}")
+async def test_update_name(phone_number: str, name: str):
+    """Simple endpoint to test name updates using URL parameters"""
+    try:
+        # Print debug info
+        print(f"test-update-name called for phone: {phone_number}, name: {name}")
+        
+        # Check if user exists
+        user = get_user_from_db(phone_number=phone_number)
+        user_existed = user is not None
+        if user_existed:
+            print(f"Found existing user: {user}")
+        else:
+            print(f"No existing user found for phone: {phone_number}")
+        
+        # Attempt to update or create user
+        if user_existed:
+            # Update existing user's name in MongoDB
+            result = callers_collection.update_one(
+                {"phone_number": phone_number},
+                {"$set": {"name": name}}
+            )
+            print(f"Update result - matched: {result.matched_count}, modified: {result.modified_count}")
+            success = result.modified_count > 0
+        else:
+            # Create new user
+            new_user = {
+                "name": name,
+                "phone_number": phone_number
+            }
+            result = callers_collection.insert_one(new_user)
+            print(f"Insert result - inserted_id: {result.inserted_id}")
+            success = result.inserted_id is not None
+        
+        # Fetch the user after update to verify
+        updated_user = get_user_from_db(phone_number=phone_number)
+        print(f"User after operation: {updated_user}")
+        
+        return {
+            "success": success,
+            "existed_before": user_existed,
+            "user_before": user,
+            "user_after": updated_user
+        }
+    except Exception as e:
+        print(f"Error in test-update-name: {str(e)}")
+        return {"success": False, "error": str(e)}
