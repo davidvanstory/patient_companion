@@ -5,7 +5,8 @@ import logging
 
 from agent.helpers import (
     User, get_user_from_db, save_user, save_symptom, get_symptom_from_db, 
-    search_patient_query, update_user_name, callers_collection
+    search_patient_query, update_user_name, callers_collection,
+    get_user_symptoms
 )
 
 app = FastAPI()
@@ -41,26 +42,69 @@ async def init(request: Request) -> Dict[str, Any]:
             # Save the new user to the database
             if save_user(user=new_user):
                 logger.info(f"New user created: {caller_id} with name: {initial_name}")
-                return {"dynamic_variables": {
-                    "name": initial_name,  # Use the same name as stored in DB
-                    "phone_number": caller_id
-                }}
+                return {
+                    "dynamic_variables": {
+                        "name": initial_name,  # Use the same name as stored in DB
+                        "phone_number": caller_id
+                    },
+                    "conversation_config_override": {
+                        "agent": {
+                            "prompt": [
+                                {
+                                    "prompt": f"You are a patient companion assistant. The patient is a new user who hasn't yet provided their name or symptoms. Ask for their name and symptoms."
+                                }
+                            ],
+                            "first_message": f"Hello there, I'm your health companion. What's your name, and what symptoms would you like me to track for you today?"
+                        }
+                    }
+                }
             else:
                 logger.error(f"Failed to save new user: {caller_id}")
                 return {"status": "error", "message": "Failed to create user"}
         
-        # User exists, return their actual stored name
-        logger.info(f"Existing user found: {user['phone_number']} with name: {user['name']}")
-        return {"dynamic_variables": {
-            "name": user['name'],
-            "phone_number": user['phone_number'],
-        }}
+        # User exists, get their symptoms
+        user_symptoms = get_user_symptoms(caller_id)
+        symptom_texts = [s["symptom"] for s in user_symptoms]
+        
+        logger.info(f"Existing user found: {user['phone_number']} with name: {user['name']} and symptoms: {symptom_texts}")
+        
+        first_message = f"Hello {user['name']}, "
+        if symptom_texts:
+            first_message += f"how are your symptoms today? Last time you mentioned {', '.join(symptom_texts)}."
+        else:
+            first_message += "what symptoms would you like me to track for you today?"
+        
+        prompt_text = f"You are a patient companion assistant. The patient's name is {user['name']}. "
+        if symptom_texts:
+            prompt_text += f"They previously reported the following symptoms: {', '.join(symptom_texts)}. "
+            prompt_text += "Ask them how these symptoms are progressing and if they have any new symptoms."
+        else:
+            prompt_text += "This is their first call. Ask them about their symptoms."
+        prompt_text += " Your job is to help them track their symptoms and provide support."
+        
+        return {
+            "dynamic_variables": {
+                "name": user['name'],
+                "phone_number": user['phone_number'],
+                "previous_symptoms": symptom_texts
+            },
+            "conversation_config_override": {
+                "agent": {
+                    "prompt": [
+                        {
+                            "prompt": prompt_text
+                        }
+                    ],
+                    "first_message": first_message
+                }
+            }
+        }
     except Exception as e:
         logger.error(f"Error in init endpoint: {str(e)}")
         return {"status": "error", "message": f"Server error: {str(e)}"}
 
 @app.post("/agent/update-name")
-async def update_name(request: Request) -> Dict[str, Any]:  # Changed return type to Dict[str, Any]
+async def update_name(request: Request) -> Dict[str, Any]:
     try:
         # Log that the endpoint was called
         logger.info("update-name endpoint called")
@@ -145,10 +189,20 @@ async def update_name(request: Request) -> Dict[str, Any]:  # Changed return typ
         
         # --- Return appropriate response ---
         if success:
-            # Fix: Return dynamic_variables as a string to match expected return type
+            # Return updated config with new name
             return {
                 "status": "success", 
-                "message": f"Name updated to {new_name}"
+                "message": f"Name updated to {new_name}",
+                "conversation_config_override": {
+                    "agent": {
+                        "prompt": [
+                            {
+                                "prompt": f"The patient has told you their name is {new_name}. Use this name when addressing them."
+                            }
+                        ],
+                        "first_message": f"Thank you, {new_name}. Now, what symptoms would you like me to track for you?"
+                    }
+                }
             }
         else:
             return {"status": "error", "message": "Failed to update name"}
@@ -168,21 +222,47 @@ async def take_symptom(request: Request) -> dict[str, str]:
             return {"status": "error", "message": "Missing 'symptom' field in request"}
         
         symptom = request_body['symptom']
+        # Get caller_id from request if available
+        caller_id = request_body.get('caller_id')
+        
         if not symptom or not isinstance(symptom, str):
             logger.warning(f"Invalid symptom format: {symptom}")
             return {"status": "error", "message": f"Invalid symptom format: {symptom}"}
         
-        logger.info(f"Received symptom: {symptom}")
-        if save_symptom(symptom):
+        logger.info(f"Received symptom: {symptom} for user: {caller_id}")
+        if save_symptom(symptom, caller_id):
             logger.info("Symptom saved successfully")
-            return {"status": "success", "message": "Symptom saved successfully"}
+            
+            # Get updated list of symptoms for confirmation message
+            user_symptoms = []
+            if caller_id:
+                user_symptoms = get_user_symptoms(caller_id)
+                symptom_texts = [s["symptom"] for s in user_symptoms]
+            
+            confirmation_message = f"I've saved your symptom: {symptom}."
+            if len(user_symptoms) > 1:
+                confirmation_message += f" I'm now tracking the following symptoms for you: {', '.join(symptom_texts)}."
+            
+            return {
+                "status": "success", 
+                "message": "Symptom saved successfully",
+                "conversation_config_override": {
+                    "agent": {
+                        "prompt": [
+                            {
+                                "prompt": f"The patient has reported a new symptom: {symptom}. Acknowledge this and ask if they'd like to report any other symptoms."
+                            }
+                        ],
+                        "first_message": confirmation_message
+                    }
+                }
+            }
         else:
             logger.error("Failed to save symptom to database")
             return {"status": "error", "message": "Failed to save symptom to database"}
     except Exception as e:
         logger.error(f"Error in take_symptom endpoint: {str(e)}")
         return {"status": "error", "message": f"Server error: {str(e)}"}
-    
 
 @app.get("/agent/get-symptom")
 async def get_symptom(request: Request) -> dict[str, str]:
@@ -192,8 +272,6 @@ async def get_symptom(request: Request) -> dict[str, str]:
         "note": note
     }
 
-#append-symptom route here
-
 @app.post("/agent/search")
 async def search(request: Request) -> dict[str, str]:
     request_body = await request.json()
@@ -201,4 +279,3 @@ async def search(request: Request) -> dict[str, str]:
     return {
         "result": result
     }
-

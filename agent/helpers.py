@@ -1,5 +1,6 @@
-from typing import TypedDict, Any
+from typing import TypedDict, Any, List, Dict
 import os
+import datetime
 from dotenv import load_dotenv
 from pymongo import DESCENDING, MongoClient
 from pymongo.results import InsertOneResult
@@ -35,6 +36,11 @@ except PyMongoError as e:
 class User(TypedDict):
     phone_number: str
     name: str
+
+class Symptom(TypedDict):
+    symptom: str
+    phone_number: str
+    timestamp: datetime.datetime
 
 def save_user(user: User) -> bool:
     try:
@@ -132,14 +138,18 @@ def get_user_from_db(phone_number: str) -> User | None:
         logger.error(f"MongoDB error while retrieving user: {e}")
         return None
 
-def save_symptom(note: str) -> bool:
+def save_symptom(symptom: str, phone_number: str = None) -> bool:
     try:
-        logger.info(f"Attempting to save symptom: {note}")
-        if not note or not isinstance(note, str):
-            logger.warning(f"Invalid symptom format: {note}")
+        logger.info(f"Attempting to save symptom: {symptom} for user: {phone_number}")
+        if not symptom or not isinstance(symptom, str):
+            logger.warning(f"Invalid symptom format: {symptom}")
             return False
             
-        document = {"symptom": note}
+        document = {
+            "symptom": symptom,
+            "phone_number": phone_number,
+            "timestamp": datetime.datetime.now()
+        }
         logger.info(f"Inserting document: {document}")
         
         result = symptoms_collection.insert_one(document)
@@ -171,8 +181,49 @@ def get_symptom_from_db() -> str:
     except Exception as e:
         logger.error(f"Unexpected error while retrieving symptom: {e}")
         return "Error retrieving note from database"
+
+def get_user_symptoms(phone_number: str) -> List[Dict[str, Any]]:
+    """
+    Retrieves all symptoms for a specific user by phone number.
     
-#append symptom to the db
+    Args:
+        phone_number (str): The phone number of the user
+        
+    Returns:
+        List[Dict[str, Any]]: List of symptom documents for the user
+    """
+    try:
+        if not phone_number:
+            logger.warning("No phone number provided to get_user_symptoms")
+            return []
+            
+        symptoms = list(symptoms_collection.find(
+            {"phone_number": phone_number},
+            sort=[("timestamp", DESCENDING)]
+        ))
+        
+        logger.info(f"Retrieved {len(symptoms)} symptoms for user: {phone_number}")
+        return symptoms
+    except PyMongoError as e:
+        logger.error(f"MongoDB error while retrieving symptoms for user {phone_number}: {e}")
+        return []
+    except Exception as e:
+        logger.error(f"Unexpected error while retrieving symptoms for user {phone_number}: {e}")
+        return []
+
+def append_symptom(symptom: str, phone_number: str = None) -> bool:
+    """
+    Appends a new symptom to a user's existing symptoms.
+    This is useful for updating a patient's condition with new information.
+    
+    Args:
+        symptom (str): The symptom to append
+        phone_number (str, optional): The user's phone number
+        
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    return save_symptom(symptom, phone_number)  # Currently the same as save_symptom
 
 def query_perplexity(query: str):
     url = "https://api.perplexity.ai/chat/completions"
@@ -200,7 +251,3 @@ def query_perplexity(query: str):
 def search_patient_query(note: str) -> str:
     result = query_perplexity(note)
     return result
-
-
-# schedule appointment
-# 
