@@ -47,57 +47,17 @@ async def init(request: Request) -> Dict[str, Any]:
                     "dynamic_variables": {
                         "name": initial_name,
                         "phone_number": caller_id
-                    },
-                    "conversation_config_override": {
-                        "agent": {
-                            "prompt": [
-                                {
-                                    "prompt": "You are a patient companion assistant. The patient is a new user who hasn't yet provided their name or symptoms. Ask for their name and symptoms."
-                                }
-                            ],
-                            "first_message": "Hello there, I'm your health companion. What's your name, and what symptoms would you like me to track for you today?"
-                        }
                     }
                 }
             else:
                 logger.error(f"Failed to save new user: {caller_id}")
                 return {"status": "error", "message": "Failed to create user"}
         
-        # User exists, get their symptoms
-        user_symptoms = get_user_symptoms(caller_id)
-        symptom_texts = [s["symptom"] for s in user_symptoms]
-        
-        logger.info(f"Existing user found: {user['phone_number']} with name: {user['name']} and symptoms: {symptom_texts}")
-        
-        first_message = f"Hello {user['name']}, "
-        if symptom_texts:
-            first_message += f"how are your symptoms today? Last time you mentioned {', '.join(symptom_texts)}."
-        else:
-            first_message += "what symptoms would you like me to track for you today?"
-        
-        prompt_text = f"You are a patient companion assistant. The patient's name is {user['name']}. "
-        if symptom_texts:
-            prompt_text += f"They previously reported the following symptoms: {', '.join(symptom_texts)}. "
-            prompt_text += "Ask them how these symptoms are progressing and if they have any new symptoms."
-        else:
-            prompt_text += "This is their first call. Ask them about their symptoms."
-        prompt_text += " Your job is to help them track their symptoms and provide support."
-        
+        # For existing users, just return basic info too
         return {
             "dynamic_variables": {
                 "name": user['name'],
-                "phone_number": user['phone_number'],
-                "previous_symptoms": symptom_texts
-            },
-            "conversation_config_override": {
-                "agent": {
-                    "prompt": [
-                        {
-                            "prompt": prompt_text
-                        }
-                    ],
-                    "first_message": first_message
-                }
+                "phone_number": user['phone_number']
             }
         }
     except Exception as e:
