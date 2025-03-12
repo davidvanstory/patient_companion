@@ -174,45 +174,56 @@ async def update_name(request: Request) -> Dict[str, Any]:
 async def take_symptom(request: Request) -> Dict[str, Any]:
     try:
         request_body = await request.json()
+        logger.info(f"Full request body for take-symptom: {request_body}")  # Add detailed logging
+        
         if 'symptom' not in request_body:
             logger.warning("Missing 'symptom' field in request")
             return {"status": "error", "message": "Missing 'symptom' field in request"}
         
         symptom = request_body['symptom']
-        # Get caller_id from request if available
-        caller_id = request_body.get('caller_id')
+        
+        # Check all possible sources for caller_id
+        caller_id = None
+        
+        # 1. Try request body under different possible keys
+        for key in ['caller_id', 'phone_number', 'user_id', 'from']:
+            if key in request_body and request_body[key]:
+                caller_id = request_body[key]
+                logger.info(f"Found caller_id in request body with key '{key}': {caller_id}")
+                break
+        
+        # 2. Try headers
+        if not caller_id:
+            caller_id = request.headers.get("X-Caller-ID")
+            if caller_id:
+                logger.info(f"Found caller_id in headers: {caller_id}")
+        
+        # 3. Try query params
+        if not caller_id:
+            caller_id = request.query_params.get("caller_id")
+            if caller_id:
+                logger.info(f"Found caller_id in query params: {caller_id}")
+        
+        # 4. Last resort: get the most recent caller
+        if not caller_id:
+            logger.warning("No caller_id found in request sources, attempting to find most recent caller")
+            latest_user = callers_collection.find_one(sort=[("_id", -1)])
+            if latest_user:
+                caller_id = latest_user.get("phone_number")
+                logger.info(f"Using most recent caller ID: {caller_id}")
+        
+        logger.info(f"Final caller_id to be used: {caller_id}")
         
         if not symptom or not isinstance(symptom, str):
             logger.warning(f"Invalid symptom format: {symptom}")
             return {"status": "error", "message": f"Invalid symptom format: {symptom}"}
         
-        logger.info(f"Received symptom: {symptom} for user: {caller_id}")
+        logger.info(f"Attempting to save symptom: {symptom} for user: {caller_id}")
         if save_symptom(symptom, caller_id):
             logger.info("Symptom saved successfully")
-            
-            # Get updated list of symptoms for confirmation message
-            user_symptoms = []
-            if caller_id:
-                user_symptoms = get_user_symptoms(caller_id)
-                symptom_texts = [s["symptom"] for s in user_symptoms]
-            
-            confirmation_message = f"I've saved your symptom: {symptom}."
-            if len(user_symptoms) > 1:
-                confirmation_message += f" I'm now tracking the following symptoms for you: {', '.join(symptom_texts)}."
-            
             return {
                 "status": "success", 
-                "message": "Symptom saved successfully",
-                "conversation_config_override": {
-                    "agent": {
-                        "prompt": [
-                            {
-                                "prompt": f"The patient has reported a new symptom: {symptom}. Acknowledge this and ask if they'd like to report any other symptoms."
-                            }
-                        ],
-                        "first_message": confirmation_message
-                    }
-                }
+                "message": f"Symptom saved successfully: {symptom}"
             }
         else:
             logger.error("Failed to save symptom to database")
