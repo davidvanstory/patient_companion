@@ -171,7 +171,7 @@ async def update_name(request: Request) -> Dict[str, Any]:
         return {"status": "error", "message": f"Server error: {str(e)}"}
 
 @app.post("/agent/take-symptom")
-async def take_symptom(request: Request) -> dict[str, str]:
+async def take_symptom(request: Request) -> Dict[str, Any]:
     try:
         request_body = await request.json()
         if 'symptom' not in request_body:
