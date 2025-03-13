@@ -29,7 +29,7 @@ async def init(request: Request) -> Dict[str, Any]:
         logger.info(f"Initializing user with caller_id: {caller_id}")
         
         user: User | None = get_user_from_db(phone_number=caller_id)
-        first_message = f"Hello, I'm your health companion. What's your name, and what symptoms or medical questions would you like me to track for you today?"
+        first_message = f"Hey there, thanks for calling. I'm your health companion. I'm an expert in lung cancer symptoms and diagnoses, and can answer questions you may have, and help with scheduling and tracking your appointments. Let's start with your name, and then can you share a little about how you're feeling or how I can help you today?"
 
         if not user:
             # Use a consistent name in both database and response
