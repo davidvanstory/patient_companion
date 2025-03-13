@@ -57,8 +57,15 @@ async def init(request: Request) -> Dict[str, Any]:
                 logger.error(f"Failed to save new user: {caller_id}")
                 return {"status": "error", "message": "Failed to create user"}
         else:
-            first_message = f"Hey {user['name']}"
+            symptoms = get_user_symptoms(caller_id)
+            if symptoms:
+                print("symptoms", symptoms)
+                first_message = f"Hey I remember your symptoms"
+            else:
+                first_message = f"Hey {user['name']}"
+
         # For existing users, just return basic info too
+
         return {
             "dynamic_variables": {
                 "name": user['name'],
