@@ -29,7 +29,7 @@ async def init(request: Request) -> Dict[str, Any]:
         logger.info(f"Initializing user with caller_id: {caller_id}")
         
         user: User | None = get_user_from_db(phone_number=caller_id)
-        first_message = f"Hello, I'm your health companion. What's your name, and what symptoms would you like me to track for you today?"
+        first_message = f"Hello, I'm your health companion. What's your name, and what symptoms or medical questions would you like me to track for you today?"
 
         if not user:
             # Use a consistent name in both database and response
@@ -60,7 +60,7 @@ async def init(request: Request) -> Dict[str, Any]:
             symptoms = get_user_symptoms(caller_id)
             if symptoms:
                 print("symptoms", symptoms)
-                first_message = f"Hey I remember your symptoms, how is your {symptoms[0]['symptom']}?"
+                first_message = f"Hey {initial_name}, I remember your symptoms, how is your {symptoms[0]['symptom']}?"
             else:
                 first_message = f"Hey {user['name']}"
 
