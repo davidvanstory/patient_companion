@@ -29,7 +29,8 @@ async def init(request: Request) -> Dict[str, Any]:
         logger.info(f"Initializing user with caller_id: {caller_id}")
         
         user: User | None = get_user_from_db(phone_number=caller_id)
-        
+        first_message = f"Hello, I'm your health companion. What's your name, and what symptoms would you like me to track for you today?"
+
         if not user:
             # Use a consistent name in both database and response
             initial_name = "new_user"  # This will be updated later when they give their name
@@ -47,18 +48,25 @@ async def init(request: Request) -> Dict[str, Any]:
                     "dynamic_variables": {
                         "name": initial_name,
                         "phone_number": caller_id
-                    }
+                    }, 
+                    "conversation_config_override": {
+                        "agent": {
+                            "first_message":  first_message }}
                 }
             else:
                 logger.error(f"Failed to save new user: {caller_id}")
                 return {"status": "error", "message": "Failed to create user"}
-        
+        else:
+            first_message = f"Hey {user['name']}"
         # For existing users, just return basic info too
         return {
             "dynamic_variables": {
                 "name": user['name'],
                 "phone_number": user['phone_number']
-            }
+            }, 
+            "conversation_config_override": {
+                        "agent": {
+                            "first_message":  first_message }}
         }
     except Exception as e:
         logger.error(f"Error in init endpoint: {str(e)}")
@@ -154,16 +162,8 @@ async def update_name(request: Request) -> Dict[str, Any]:
             return {
                 "status": "success", 
                 "message": f"Name updated to {new_name}",
-                "conversation_config_override": {
-                    "agent": {
-                        "prompt": [
-                            {
-                                "prompt": f"The patient has told you their name is {new_name}. Use this name when addressing them."
-                            }
-                        ],
-                        "first_message": f"Thank you, {new_name}. Now, what symptoms would you like me to track for you?"
-                    }
-                }
+               
+                
             }
         else:
             return {"status": "error", "message": "Failed to update name"}
