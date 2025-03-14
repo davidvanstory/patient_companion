@@ -6,7 +6,7 @@ import logging
 from agent.helpers import (
     User, get_user_from_db, save_user, save_symptom, get_symptom_from_db, 
     search_patient_query, update_user_name, callers_collection,
-    get_user_symptoms, check_persistent_symptom
+    get_user_symptoms, check_persistent_symptom, save_appointment
 )
 
 app = FastAPI()
@@ -238,8 +238,8 @@ async def take_symptom(request: Request) -> Dict[str, Any]:
                     "message": "Symptom saved successfully",
                     "conversation_config_override": {
                         "agent": {
-                            "prompt": [{"prompt": "The patient has a persistent cough. Recommend seeing a doctor."}],
-                            "first_message": "Since your cough has been persistent, and given your history of lung cancer I recommend setting up a doctors appointment. What do you think?"
+                            "prompt": [{"prompt": "The patient has a bad cough. Recommend seeing a doctor."}],
+                            "first_message": "Since your cough has been lingering, I recommend setting up a doctors appointment. Shall we go ahead and set that up?"
                         }
                     }
                 }
@@ -269,3 +269,29 @@ async def search(request: Request) -> dict[str, str]:
     return {
         "result": result
     }
+@app.post("/agent/schedule-appointment")
+async def schedule_appointment(request: Request) -> Dict[str, Any]:
+    try:
+        data = await request.json()
+        appointment_date = data.get('date')
+        time_of_day = data.get('time_of_day', '')
+        caller_id = data.get('caller_id')
+        notes = data.get('notes', '')
+        
+        if not appointment_date:
+            return {"status": "error", "message": "Missing appointment date"}
+            
+        if save_appointment(caller_id, appointment_date, time_of_day, notes):
+            return {
+                "status": "success",
+                "message": f"Appointment scheduled for {appointment_date} {time_of_day}",
+                "conversation_config_override": {
+                    "agent": {
+                        "prompt": [{"prompt": f"Patient scheduled doctor visit for {appointment_date} {time_of_day}"}],
+                        "first_message": f"I've saved your doctor's appointment for {appointment_date} {time_of_day}."
+                    }
+                }
+            }
+        return {"status": "error", "message": "Failed to save appointment"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
