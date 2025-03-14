@@ -275,14 +275,11 @@ def check_persistent_symptom(phone_number: str, symptom: str) -> bool:
         logger.error(f"Error checking persistent symptoms: {e}")
         return False
     
-def save_appointment(phone_number: str, appointment_date: str, time_of_day: str = "", notes: str = "") -> bool:
+def save_appointment(phone_number: str, appointment_day: str) -> bool:
     try:
         result = appointments_collection.insert_one({
             "phone_number": phone_number,
-            "date": appointment_date,
-            "time_of_day": time_of_day,
-            "notes": notes,
-            "created_at": datetime.datetime.now()
+            "day": appointment_day,
         })
         return bool(result.inserted_id)
     except Exception as e:

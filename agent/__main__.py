@@ -273,25 +273,19 @@ async def search(request: Request) -> dict[str, str]:
 async def schedule_appointment(request: Request) -> Dict[str, Any]:
     try:
         data = await request.json()
-        appointment_date = data.get('date')
-        time_of_day = data.get('time_of_day', '')
-        caller_id = data.get('caller_id')
-        notes = data.get('notes', '')
+        logger.info(f"Appointment request data: {data}")
         
-        if not appointment_date:
-            return {"status": "error", "message": "Missing appointment date"}
+        appointment_day = data.get('day')
+        
+        if not appointment_day:
+            return {"status": "error", "message": "Missing appointment day"}
             
-        if save_appointment(caller_id, appointment_date, time_of_day, notes):
+        if save_appointment(appointment_day):
             return {
                 "status": "success",
-                "message": f"Appointment scheduled for {appointment_date} {time_of_day}",
-                "conversation_config_override": {
-                    "agent": {
-                        "prompt": [{"prompt": f"Patient scheduled doctor visit for {appointment_date} {time_of_day}"}],
-                        "first_message": f"I've saved your doctor's appointment for {appointment_date} {time_of_day}."
-                    }
-                }
+                "message": f"Appointment scheduled for {appointment_day}"
             }
         return {"status": "error", "message": "Failed to save appointment"}
     except Exception as e:
+        logger.error(f"Error in schedule_appointment: {str(e)}")
         return {"status": "error", "message": str(e)}
