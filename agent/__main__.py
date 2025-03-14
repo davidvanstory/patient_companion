@@ -269,23 +269,11 @@ async def search(request: Request) -> dict[str, str]:
     return {
         "result": result
     }
+
 @app.post("/agent/schedule-appointment")
-async def schedule_appointment(request: Request) -> Dict[str, Any]:
-    try:
-        data = await request.json()
-        logger.info(f"Appointment request data: {data}")
-        
-        appointment_day = data.get('day')
-        
-        if not appointment_day:
-            return {"status": "error", "message": "Missing appointment day"}
-            
-        if save_appointment(appointment_day):
-            return {
-                "status": "success",
-                "message": f"Appointment scheduled for {appointment_day}"
-            }
-        return {"status": "error", "message": "Failed to save appointment"}
-    except Exception as e:
-        logger.error(f"Error in schedule_appointment: {str(e)}")
-        return {"status": "error", "message": str(e)}
+async def schedule_appointment(request: Request) -> dict[str, str]:
+    request_body = await request.json()
+    if save_appointment(request_body['apt']):
+        return {"status": "success"}
+    else:
+        return {"status": "error"}

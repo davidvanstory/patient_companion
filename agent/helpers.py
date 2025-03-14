@@ -30,6 +30,7 @@ try:
     callers_collection = db['callers']
     symptoms_collection = db['symptoms']
     appointments_collection = db['appointments']
+
 except PyMongoError as e:
     logger.error(f"Failed to connect to MongoDB: {e}")
     raise
@@ -275,13 +276,9 @@ def check_persistent_symptom(phone_number: str, symptom: str) -> bool:
         logger.error(f"Error checking persistent symptoms: {e}")
         return False
     
-def save_appointment(phone_number: str, appointment_day: str) -> bool:
-    try:
-        result = appointments_collection.insert_one({
-            "phone_number": phone_number,
-            "day": appointment_day,
-        })
-        return bool(result.inserted_id)
-    except Exception as e:
-        logger.error(f"Error saving appointment: {e}")
+def save_appointment(note: str) -> bool:
+    result = appointments_collection.insert_one({"apt": note})
+    if result.inserted_id:
+        return True
+    else:
         return False
