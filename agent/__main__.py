@@ -29,7 +29,7 @@ async def init(request: Request) -> Dict[str, Any]:
         logger.info(f"Initializing user with caller_id: {caller_id}")
         
         user: User | None = get_user_from_db(phone_number=caller_id)
-        first_message = f"Hey there, I'm Momsen, your health companion. I can help you track your symptoms, answer questions, and assist with scheduling appointments. To start, may I have your name?"
+        first_message = f"Hey there, I'm Momsen, your health companion. I can help you track your symptoms, and answer medical questions you may have. To start, may I have your name?"
 
         if not user:
             # Use a consistent name in both database and response
@@ -239,7 +239,7 @@ async def take_symptom(request: Request) -> Dict[str, Any]:
                     "conversation_config_override": {
                         "agent": {
                             "prompt": [{"prompt": "The patient has a persistent cough. Recommend seeing a doctor."}],
-                            "first_message": "Since your cough has persisted across our conversations, I recommend seeing a doctor soon."
+                            "first_message": "Since your cough has been persistent, and given your history of lung cancer I recommend setting up a doctors appointment. What do you think?"
                         }
                     }
                 }
