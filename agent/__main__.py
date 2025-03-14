@@ -6,7 +6,7 @@ import logging
 from agent.helpers import (
     User, get_user_from_db, save_user, save_symptom, get_symptom_from_db, 
     search_patient_query, update_user_name, callers_collection,
-    get_user_symptoms
+    get_user_symptoms, check_persistent_symptom
 )
 
 app = FastAPI()
@@ -29,7 +29,7 @@ async def init(request: Request) -> Dict[str, Any]:
         logger.info(f"Initializing user with caller_id: {caller_id}")
         
         user: User | None = get_user_from_db(phone_number=caller_id)
-        first_message = f"Hey there, thanks for calling. I'm Momsen, your health companion. I'm an expert in lung cancer, and can answer questions you may have, and help with scheduling your appointments. Let's start with your name, and can you share how I can help you today?"
+        first_message = f"Hey there, I'm Momsen, your health companion. I can help you track your symptoms, answer questions, and assist with scheduling appointments. To start, may I have your name?"
 
         if not user:
             # Use a consistent name in both database and response
@@ -232,6 +232,17 @@ async def take_symptom(request: Request) -> Dict[str, Any]:
         logger.info(f"Attempting to save symptom: {symptom} for user: {caller_id}")
         if save_symptom(symptom, caller_id):
             logger.info("Symptom saved successfully")
+            if "cough" in symptom.lower() and check_persistent_symptom(caller_id, "cough"):
+                return {
+                    "status": "success",
+                    "message": "Symptom saved successfully",
+                    "conversation_config_override": {
+                        "agent": {
+                            "prompt": [{"prompt": "The patient has a persistent cough. Recommend seeing a doctor."}],
+                            "first_message": "Since your cough has persisted across our conversations, I recommend seeing a doctor soon."
+                        }
+                    }
+                }
             return {
                 "status": "success", 
                 "message": f"Symptom saved successfully: {symptom}"

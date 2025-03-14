@@ -251,3 +251,26 @@ def query_perplexity(query: str):
 def search_patient_query(note: str) -> str:
     result = query_perplexity(note)
     return result
+
+def check_persistent_symptom(phone_number: str, symptom: str) -> bool:
+    """Check if the previously recorded symptom for this user mentioned the given symptom"""
+    try:
+        # Ensure phone_number is a string with proper formatting
+        if phone_number and not phone_number.startswith("+"):
+            phone_number = "+" + phone_number
+            
+        # Get the most recent symptom before the current one
+        previous_symptom = symptoms_collection.find_one(
+            {"phone_number": phone_number},
+            sort=[("timestamp", -1)],
+            skip=1  # Skip the current/most recent symptom
+        )
+        
+        # Check if a previous symptom exists and contains the keyword
+        if previous_symptom and symptom.lower() in previous_symptom.get("symptom", "").lower():
+            return True
+        return False
+    except Exception as e:
+        logger.error(f"Error checking persistent symptoms: {e}")
+        return False
+    
