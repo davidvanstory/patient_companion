@@ -254,26 +254,31 @@ def search_patient_query(note: str) -> str:
     result = query_perplexity(note)
     return result
 
-def check_persistent_symptom(phone_number: str, symptom: str) -> bool:
-    """Check if the previously recorded symptom for this user mentioned the given symptom"""
+def check_persistent_symptom(caller_id: str, symptom_type: str) -> bool:
     try:
-        # Ensure phone_number is a string with proper formatting
-        if phone_number and not phone_number.startswith("+"):
-            phone_number = "+" + phone_number
-            
-        # Get the most recent symptom before the current one
-        previous_symptom = symptoms_collection.find_one(
-            {"phone_number": phone_number},
-            sort=[("timestamp", -1)],
-            skip=1  # Skip the current/most recent symptom
+        # Get all symptoms for this user, sorted by date (newest first)
+        symptoms = symptoms_collection.find(
+            {"caller_id": caller_id},
+            sort=[("timestamp", -1)]
         )
         
-        # Check if a previous symptom exists and contains the keyword
-        if previous_symptom and symptom.lower() in previous_symptom.get("symptom", "").lower():
-            return True
-        return False
+        symptoms_list = list(symptoms)
+        logger.info(f"Found {len(symptoms_list)} symptoms for user {caller_id}")
+        
+        if len(symptoms_list) < 2:
+            logger.info("No previous symptoms found")
+            return False
+            
+        # Get the previous symptom (index 1 since we're sorted newest first)
+        previous_symptom = symptoms_list[1]
+        
+        logger.info(f"Previous symptom was: {previous_symptom.get('symptom')}")
+        
+        # Check if the previous symptom was of the specified type
+        return symptom_type.lower() in previous_symptom.get('symptom', '').lower()
+        
     except Exception as e:
-        logger.error(f"Error checking persistent symptoms: {e}")
+        logger.error(f"Error checking persistent symptom: {str(e)}")
         return False
     
 def save_appointment(note: str) -> bool:
