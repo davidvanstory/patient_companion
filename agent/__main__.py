@@ -271,9 +271,28 @@ async def search(request: Request) -> dict[str, str]:
     }
 
 @app.post("/agent/schedule-appointment")
-async def schedule_appointment(request: Request) -> dict[str, str]:
-    request_body = await request.json()
-    if save_appointment(request_body['apt']):
-        return {"status": "success"}
-    else:
-        return {"status": "error"}
+async def schedule_appointment(request: Request) -> Dict[str, Any]:
+    try:
+        request_body = await request.json()
+        logger.info(f"Schedule appointment request body: {request_body}")
+        
+        if 'apt' not in request_body:
+            logger.error("Missing 'apt' field in request")
+            return {"status": "error", "message": "Missing appointment details"}
+            
+        if save_appointment(request_body['apt']):
+            logger.info("Appointment saved successfully")
+            return {
+                "status": "success",
+                "message": "Appointment scheduled successfully"
+            }
+        else:
+            logger.error("Failed to save appointment")
+            return {
+                "status": "error",
+                "message": "Failed to save appointment to database"
+            }
+            
+    except Exception as e:
+        logger.error(f"Error in schedule_appointment endpoint: {str(e)}")
+        return {"status": "error", "message": f"Server error: {str(e)}"}
