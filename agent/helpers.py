@@ -256,14 +256,14 @@ def search_patient_query(note: str) -> str:
 
 def check_persistent_symptom(caller_id: str, symptom_type: str) -> bool:
     try:
-        # Get all symptoms for this user, sorted by date (newest first)
+        # Query by phone_number instead of caller_id
         symptoms = symptoms_collection.find(
-            {"caller_id": caller_id},
+            {"phone_number": caller_id},  # Changed from caller_id to phone_number
             sort=[("timestamp", -1)]
         )
         
         symptoms_list = list(symptoms)
-        logger.info(f"Found {len(symptoms_list)} symptoms for user {caller_id}")
+        logger.info(f"Found {len(symptoms_list)} symptoms for phone number {caller_id}")
         
         if len(symptoms_list) < 2:
             logger.info("No previous symptoms found")
