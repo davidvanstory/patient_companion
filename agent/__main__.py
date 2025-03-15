@@ -276,11 +276,11 @@ async def schedule_appointment(request: Request) -> Dict[str, Any]:
         request_body = await request.json()
         logger.info(f"Schedule appointment request body: {request_body}")
         
-        if 'apt' not in request_body:
-            logger.error("Missing 'apt' field in request")
+        if 'appointment' not in request_body:
+            logger.error("Missing 'appointment' field in request")
             return {"status": "error", "message": "Missing appointment details"}
             
-        if save_appointment(request_body['apt']):
+        if save_appointment(request_body['appointment']):
             logger.info("Appointment saved successfully")
             return {
                 "status": "success",
