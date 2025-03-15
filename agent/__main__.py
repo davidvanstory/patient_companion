@@ -232,17 +232,21 @@ async def take_symptom(request: Request) -> Dict[str, Any]:
         logger.info(f"Attempting to save symptom: {symptom} for user: {caller_id}")
         if save_symptom(symptom, caller_id):
             logger.info("Symptom saved successfully")
-            if "cough" in symptom.lower() and check_persistent_symptom(caller_id, "cough"):
-                return {
-                    "status": "success",
-                    "message": "Symptom saved successfully",
-                    "conversation_config_override": {
-                        "agent": {
-                            "prompt": [{"prompt": "The patient has a bad cough. Recommend seeing a doctor."}],
-                            "first_message": "Since your cough has been lingering, I recommend setting up a doctors appointment. Shall we go ahead and set that up?"
+            # Only check for persistent cough if the current symptom is a cough
+            if "cough" in symptom.lower():
+                is_persistent = check_persistent_symptom(caller_id, "cough")
+                logger.info(f"Checking for persistent cough. Result: {is_persistent}")
+                if is_persistent:
+                    return {
+                        "status": "success",
+                        "message": "Symptom saved successfully",
+                        "conversation_config_override": {
+                            "agent": {
+                                "prompt": [{"prompt": "The patient has a bad cough. Recommend seeing a doctor."}],
+                                "first_message": "Since your cough has been lingering, I recommend setting up a doctors appointment. Shall we go ahead and set that up?"
+                            }
                         }
                     }
-                }
             return {
                 "status": "success", 
                 "message": f"Symptom saved successfully: {symptom}"
