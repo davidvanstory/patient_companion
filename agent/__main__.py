@@ -243,7 +243,7 @@ async def take_symptom(request: Request) -> Dict[str, Any]:
                         "conversation_config_override": {
                             "agent": {
                                 "prompt": [{"prompt": "The patient has a bad cough. Recommend seeing a doctor."}],
-                                "first_message": "Since your cough has been lingering, I recommend setting up a doctors appointment. Shall we go ahead and set that up?"
+                                "first_message": "Since your cough has been lingering, what do you think about setting up a doctors appointment. Shall we go ahead and set that up?"
                             }
                         }
                     }
