@@ -2,6 +2,8 @@ from fastapi import FastAPI, Request
 import requests
 from typing import Literal, Any, Dict, Union
 import logging
+from fastapi.middleware.cors import CORSMiddleware
+
 
 from agent.helpers import (
     User, get_user_from_db, save_user, save_symptom, get_symptom_from_db, 
@@ -10,6 +12,16 @@ from agent.helpers import (
 )
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],      # Allows all origins
+    allow_credentials=True,
+    allow_methods=["*"],      # Allows all methods
+    allow_headers=["*"],      # Allows all headers
+)
+
+
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
