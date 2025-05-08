@@ -31,6 +31,12 @@ logger = logging.getLogger(__name__)
 def read_root() -> dict[str, str]:
     return {}
 
+@app.get("/test/route")
+def read_root() -> dict[str, str]:
+    return {
+        "message": "Hello World"
+    }
+
 @app.get("/agent/pizza")
 def read_root() -> dict[str, str]:
     return {"note": "The pizza guy's number is 234. Do you want cheese or pepperoni?"}
