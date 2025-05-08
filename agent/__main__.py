@@ -19,6 +19,10 @@ logger = logging.getLogger(__name__)
 def read_root() -> dict[str, str]:
     return {}
 
+@app.get("/agent/pizza")
+def read_root() -> dict[str, str]:
+    return {"note": "The pizza guy's number is 234. Do you want cheese or pepperoni?"}
+
 @app.post(path="/agent/init")
 async def init(request: Request) -> Dict[str, Any]:
     try:
