@@ -173,7 +173,7 @@ def save_symptom(symptom: str, phone_number: str = None) -> bool:
 def save_temp(temperature: float, phone_number: str = None) -> bool:
     try:
         logger.info(f"Attempting to save temperature: {temperature} for user: {phone_number}")
-        if not temperature or not isinstance(temperature, str):
+        if not isinstance(temperature, (int, float)):
             logger.warning(f"Invalid temperature format: {temperature}")
             return False
             
