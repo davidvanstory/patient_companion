@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from agent.helpers import (
     User, get_user_from_db, save_user, save_symptom, get_symptom_from_db, 
     search_patient_query, update_user_name, callers_collection,
-    get_user_symptoms, check_persistent_symptom, save_appointment
+    get_user_symptoms, check_persistent_symptom, save_appointment, save_temp
 )
 
 app = FastAPI()
@@ -285,13 +285,20 @@ async def take_symptom(request: Request) -> Dict[str, Any]:
 async def take_temperature(request: Request) -> Dict[str, Any]:
     try:
         request_body = await request.json()
-        temperature = float(request_body['temperature'])  # Convert to float to ensure it's a number
-        
-        logger.info(f"Temperature received: {temperature}")
-        return {
-            "status": "success",
-            "message": f"Temperature saved successfully: {temperature}°F"
-        }
+        temperature = float(request_body['temperature'])
+        phone_number = request_body.get('phone_number')  # Optional, if you want to associate with user
+
+        logger.info(f"Temperature received: {temperature} for user: {phone_number}")
+        if save_temp(temperature, phone_number):
+            return {
+                "status": "success",
+                "message": f"Temperature saved successfully: {temperature}°F"
+            }
+        else:
+            return {
+                "status": "error",
+                "message": "Failed to save temperature to database"
+            }
     except Exception as e:
         logger.error(f"Error saving temperature: {str(e)}")
         return {"status": "error", "message": f"Server error: {str(e)}"}
