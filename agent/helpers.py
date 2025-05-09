@@ -30,6 +30,7 @@ try:
     callers_collection = db['callers']
     symptoms_collection = db['symptoms']
     appointments_collection = db['appointments']
+    temperature_collection = db['temperature']
 
 except PyMongoError as e:
     logger.error(f"Failed to connect to MongoDB: {e}")
@@ -167,6 +168,36 @@ def save_symptom(symptom: str, phone_number: str = None) -> bool:
     except Exception as e:
         logger.error(f"Unexpected error while saving symptom: {e}")
         return False
+
+
+def save_temp(temperature: float, phone_number: str = None) -> bool:
+    try:
+        logger.info(f"Attempting to save temperature: {temperature} for user: {phone_number}")
+        if not temperature or not isinstance(temperature, str):
+            logger.warning(f"Invalid temperature format: {temperature}")
+            return False
+            
+        document = {
+            "temperature": temperature,
+            "phone_number": phone_number,
+            "timestamp": datetime.datetime.now()
+        }
+        logger.info(f"Inserting document: {document}")
+        
+        result = temperature_collection.insert_one(document)
+        if result.inserted_id:
+            logger.info(f"Temperature saved successfully with ID: {result.inserted_id}")
+            return True
+        else:
+            logger.warning("Failed to save Temperature, no inserted_id returned")
+            return False
+    except PyMongoError as e:
+        logger.error(f"MongoDB error while saving Temperature: {e}")
+        return False
+    except Exception as e:
+        logger.error(f"Unexpected error while saving Temperature: {e}")
+        return False
+
 
 def get_symptom_from_db() -> str:
     try:

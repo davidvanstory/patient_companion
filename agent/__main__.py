@@ -280,6 +280,23 @@ async def take_symptom(request: Request) -> Dict[str, Any]:
         logger.error(f"Error in take_symptom endpoint: {str(e)}")
         return {"status": "error", "message": f"Server error: {str(e)}"}
 
+
+@app.post("/agent/take-temperature")
+async def take_temperature(request: Request) -> Dict[str, Any]:
+    try:
+        request_body = await request.json()
+        temperature = float(request_body['temperature'])  # Convert to float to ensure it's a number
+        
+        logger.info(f"Temperature received: {temperature}")
+        return {
+            "status": "success",
+            "message": f"Temperature saved successfully: {temperature}°F"
+        }
+    except Exception as e:
+        logger.error(f"Error saving temperature: {str(e)}")
+        return {"status": "error", "message": f"Server error: {str(e)}"}
+
+
 @app.get("/agent/get-symptom")
 async def get_symptom(request: Request) -> dict[str, str]:
     note = get_symptom_from_db()
