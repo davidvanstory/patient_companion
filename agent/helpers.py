@@ -244,6 +244,10 @@ def get_all_temperatures_from_db() -> List[Dict[str, Any]]:
             sort=[("timestamp", DESCENDING)]
         ))
         
+        # Convert ObjectId to string for each document
+        for temp in temperatures:
+            temp['_id'] = str(temp['_id'])
+        
         logger.info(f"Retrieved {len(temperatures)} temperature records")
         return temperatures
     except PyMongoError as e:
