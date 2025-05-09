@@ -169,7 +169,7 @@ def save_symptom(symptom: str, phone_number: str = None) -> bool:
         logger.error(f"Unexpected error while saving symptom: {e}")
         return False
 
-
+# added for temp checking
 def save_temp(temperature: float, phone_number: str = None) -> bool:
     try:
         logger.info(f"Attempting to save temperature: {temperature} for user: {phone_number}")

@@ -280,7 +280,7 @@ async def take_symptom(request: Request) -> Dict[str, Any]:
         logger.error(f"Error in take_symptom endpoint: {str(e)}")
         return {"status": "error", "message": f"Server error: {str(e)}"}
 
-
+# added for temp taking
 @app.post("/agent/take-temperature")
 async def take_temperature(request: Request) -> Dict[str, Any]:
     try:
