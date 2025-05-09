@@ -16,13 +16,12 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],      # Allows all origins
+    allow_origins=["*", "http://localhost:3000"],      # Allows all origins
     allow_credentials=True,
     allow_methods=["*"],      # Allows all methods
-    allow_headers=["*"],      # Allows all headers
+    allow_headers=["*"], 
+    expose_headers=["*"],     
 )
-
-
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -332,7 +331,7 @@ async def get_all_temperatures() -> Dict[str, Any]:
     try:
         temperatures = get_all_temperatures_from_db()
         print(f"Found temperatures: {temperatures}") 
-        
+
         if not temperatures:
             print("No temperature records found")
             return {
