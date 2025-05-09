@@ -232,6 +232,27 @@ def get_temperature_from_db() -> float | None:
         return None
 
 
+def get_all_temperatures_from_db() -> List[Dict[str, Any]]:
+    """
+    Retrieves all temperature records from the database.
+    
+    Returns:
+        List[Dict[str, Any]]: List of temperature documents, sorted by timestamp descending
+    """
+    try:
+        temperatures = list(temperature_collection.find(
+            sort=[("timestamp", DESCENDING)]
+        ))
+        
+        logger.info(f"Retrieved {len(temperatures)} temperature records")
+        return temperatures
+    except PyMongoError as e:
+        logger.error(f"MongoDB error while retrieving temperatures: {e}")
+        return []
+    except Exception as e:
+        logger.error(f"Unexpected error while retrieving temperatures: {e}")
+        return []
+
 def get_user_symptoms(phone_number: str) -> List[Dict[str, Any]]:
     """
     Retrieves all symptoms for a specific user by phone number.

@@ -8,7 +8,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from agent.helpers import (
     User, get_user_from_db, save_user, save_symptom, get_symptom_from_db, 
     search_patient_query, update_user_name, callers_collection,
-    get_user_symptoms, check_persistent_symptom, save_appointment, save_temp, get_temperature_from_db
+    get_user_symptoms, check_persistent_symptom, save_appointment, save_temp, get_temperature_from_db,
+    get_all_temperatures_from_db
 )
 
 app = FastAPI()
@@ -326,6 +327,29 @@ async def get_temperature(request: Request) -> Dict[str, Any]:
         "temperature": temperature
     }
 
+@app.get("/agent/get-all-temperatures")
+async def get_all_temperatures() -> Dict[str, Any]:
+    try:
+        temperatures = get_all_temperatures_from_db()
+        if not temperatures:
+            return {
+                "status": "success",
+                "message": "No temperature records found",
+                "temperatures": []
+            }
+            
+        return {
+            "status": "success",
+            "message": f"Retrieved {len(temperatures)} temperature records",
+            "temperatures": temperatures
+        }
+    except Exception as e:
+        logger.error(f"Error in get_all_temperatures endpoint: {str(e)}")
+        return {
+            "status": "error",
+            "message": f"Server error: {str(e)}",
+            "temperatures": []
+        }
 
 @app.post("/agent/search")
 async def search(request: Request) -> dict[str, str]:
@@ -361,3 +385,4 @@ async def schedule_appointment(request: Request) -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"Error in schedule_appointment endpoint: {str(e)}")
         return {"status": "error", "message": f"Server error: {str(e)}"}
+
