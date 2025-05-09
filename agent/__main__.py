@@ -331,7 +331,10 @@ async def get_temperature(request: Request) -> Dict[str, Any]:
 async def get_all_temperatures() -> Dict[str, Any]:
     try:
         temperatures = get_all_temperatures_from_db()
+        print(f"Found temperatures: {temperatures}") 
+        
         if not temperatures:
+            print("No temperature records found")
             return {
                 "status": "success",
                 "message": "No temperature records found",
