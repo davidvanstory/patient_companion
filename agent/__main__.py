@@ -34,7 +34,7 @@ def read_root() -> dict[str, str]:
 @app.get("/test/route")
 def read_root() -> dict[str, str]:
     return {
-        "message": "Hello World"
+        "message": "Hello Cleveland"
     }
 
 @app.get("/agent/pizza")
