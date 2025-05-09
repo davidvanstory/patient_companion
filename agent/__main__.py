@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from agent.helpers import (
     User, get_user_from_db, save_user, save_symptom, get_symptom_from_db, 
     search_patient_query, update_user_name, callers_collection,
-    get_user_symptoms, check_persistent_symptom, save_appointment, save_temp
+    get_user_symptoms, check_persistent_symptom, save_appointment, save_temp, get_temperature_from_db
 )
 
 app = FastAPI()
@@ -280,6 +280,15 @@ async def take_symptom(request: Request) -> Dict[str, Any]:
         logger.error(f"Error in take_symptom endpoint: {str(e)}")
         return {"status": "error", "message": f"Server error: {str(e)}"}
 
+
+@app.get("/agent/get-symptom")
+async def get_symptom(request: Request) -> dict[str, str]:
+    note = get_symptom_from_db()
+    print("got note:", note)
+    return {
+        "note": note
+    }
+
 # added for temp taking
 @app.post("/agent/take-temperature")
 async def take_temperature(request: Request) -> Dict[str, Any]:
@@ -304,13 +313,19 @@ async def take_temperature(request: Request) -> Dict[str, Any]:
         return {"status": "error", "message": f"Server error: {str(e)}"}
 
 
-@app.get("/agent/get-symptom")
-async def get_symptom(request: Request) -> dict[str, str]:
-    note = get_symptom_from_db()
-    print("got note:", note)
+@app.get("/agent/get-temperature")
+async def get_temperature(request: Request) -> Dict[str, Any]:
+    temperature = get_temperature_from_db()
+    if temperature is None:
+        return {
+            "status": "error",
+            "message": "No temperature data available"
+        }
     return {
-        "note": note
+        "status": "success",
+        "temperature": temperature
     }
+
 
 @app.post("/agent/search")
 async def search(request: Request) -> dict[str, str]:

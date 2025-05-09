@@ -201,10 +201,10 @@ def save_temp(temperature: float, phone_number: str = None) -> bool:
 
 def get_symptom_from_db() -> str:
     try:
-        last_doc = symptoms_collection.find_one(sort=[("_id", DESCENDING)])
-        if last_doc:
-            logger.info(f"Retrieved symptom: {last_doc['symptom']}")
-            return last_doc['symptom']
+        last_symp_doc = symptoms_collection.find_one(sort=[("_id", DESCENDING)])
+        if last_symp_doc:
+            logger.info(f"Retrieved symptom: {last_symp_doc['symptom']}")
+            return last_symp_doc['symptom']
         else:
             logger.info("No symptoms found in database")
             return "couldn't find any relevant note"
@@ -214,6 +214,23 @@ def get_symptom_from_db() -> str:
     except Exception as e:
         logger.error(f"Unexpected error while retrieving symptom: {e}")
         return "Error retrieving note from database"
+    
+def get_temperature_from_db() -> float | None:
+    try:
+        last_temp_doc = temperature_collection.find_one(sort=[("_id", DESCENDING)])
+        if last_temp_doc:
+            logger.info(f"Retrieved temp: {last_temp_doc['temperature']}")
+            return float(last_temp_doc['temperature'])
+        else:
+            logger.info("No temp found in database")
+            return None
+    except PyMongoError as e:
+        logger.error(f"MongoDB error while retrieving temp: {e}")
+        return None
+    except Exception as e:
+        logger.error(f"Unexpected error while retrieving temp: {e}")
+        return None
+
 
 def get_user_symptoms(phone_number: str) -> List[Dict[str, Any]]:
     """
