@@ -17,11 +17,11 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*", "http://localhost:3000"],      # Allows all origins
+    allow_origins=["http://localhost:3000"],  # Remove "*"
     allow_credentials=True,
-    allow_methods=["*"],      # Allows all methods
-    allow_headers=["*"], 
-    expose_headers=["*"],     
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # Set up logging
@@ -354,32 +354,6 @@ async def get_all_temperatures() -> Dict[str, Any]:
             "temperatures": []
         }
 
-@app.get("/agent/get-all-images")
-async def get_all_images() -> Dict[str, Any]:
-    try:
-        images = get_all_images_from_db()
-        print(f"Found images: {images}") 
-
-        if not images:
-            return {
-                "status": "success",
-                "message": "No images found",
-                "images": []
-            }
-            
-        return {
-            "status": "success",
-            "message": f"Retrieved {len(images)} images",
-            "images": images
-        }
-    except Exception as e:
-        logger.error(f"Error in get_all_images endpoint: {str(e)}")
-        return {
-            "status": "error",
-            "message": f"Server error: {str(e)}",
-            "images": []
-        }
-
 @app.post("/agent/search")
 async def search(request: Request) -> dict[str, str]:
     request_body = await request.json()
@@ -446,3 +420,29 @@ async def save_image(request: Request) -> Dict[str, Any]:
         logger.error(f"Error in save_image endpoint: {str(e)}")
         return {"status": "error", "message": f"Server error: {str(e)}"}
 
+
+@app.get("/agent/get-all-images")
+async def get_all_images() -> Dict[str, Any]:
+    try:
+        images = get_all_images_from_db()
+        print(f"Found images: {images}") 
+
+        if not images:
+            return {
+                "status": "success",
+                "message": "No images found",
+                "images": []
+            }
+            
+        return {
+            "status": "success",
+            "message": f"Retrieved {len(images)} images",
+            "images": images
+        }
+    except Exception as e:
+        logger.error(f"Error in get_all_images endpoint: {str(e)}")
+        return {
+            "status": "error",
+            "message": f"Server error: {str(e)}",
+            "images": []
+        }

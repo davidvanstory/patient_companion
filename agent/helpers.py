@@ -258,17 +258,8 @@ def get_all_temperatures_from_db() -> List[Dict[str, Any]]:
         logger.error(f"Unexpected error while retrieving temperatures: {e}")
         return []
 
-def get_all_images_from_db() -> List[Dict[str, Any]]:
-    try:
-        images = list(images_collection.find(
-            sort=[("created_at", DESCENDING)]
-        ))
-        return images
-    except PyMongoError as e:
-        logger.error(f"MongoDB error while retrieving images: {e}")
-        return []
-    
-    
+
+
 def get_user_symptoms(phone_number: str) -> List[Dict[str, Any]]:
     """
     Retrieves all symptoms for a specific user by phone number.
@@ -398,3 +389,18 @@ def save_user_image(phone_number: str, image_url: str, cloudinary_id: str, creat
     except Exception as e:
         logger.error(f"Unexpected error while saving image: {e}")
         return False
+
+def get_all_images_from_db() -> List[Dict[str, Any]]:
+    try:
+        images = list(images_collection.find(
+            sort=[("created_at", DESCENDING)]
+        ))
+        for image in images:
+            image['_id'] = str(image['_id'])
+        logger.info(f"Retrieved {len(images)} images")
+        print(f"Found images: {images}") 
+        return images
+    except PyMongoError as e:
+        logger.error(f"MongoDB error while retrieving images: {e}")
+        return []
+    
