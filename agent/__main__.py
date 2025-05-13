@@ -3,13 +3,14 @@ import requests
 from typing import Literal, Any, Dict, Union
 import logging
 from fastapi.middleware.cors import CORSMiddleware
+from datetime import datetime
 
 
 from agent.helpers import (
     User, get_user_from_db, save_user, save_symptom, get_symptom_from_db, 
     search_patient_query, update_user_name, callers_collection,
     get_user_symptoms, check_persistent_symptom, save_appointment, save_temp, get_temperature_from_db,
-    get_all_temperatures_from_db
+    get_all_temperatures_from_db, save_user_image
 )
 
 app = FastAPI()
@@ -386,5 +387,36 @@ async def schedule_appointment(request: Request) -> Dict[str, Any]:
             
     except Exception as e:
         logger.error(f"Error in schedule_appointment endpoint: {str(e)}")
+        return {"status": "error", "message": f"Server error: {str(e)}"}
+
+@app.post("/agent/save-image")
+async def save_image(request: Request) -> Dict[str, Any]:
+    try:
+        request_body = await request.json()
+        logger.info(f"Save image request body: {request_body}")
+        
+        # Convert the created_at string to datetime object
+        created_at = datetime.fromisoformat(request_body['created_at'].replace('Z', '+00:00'))
+        
+        if save_user_image(
+            phone_number=request_body['phone_number'],
+            image_url=request_body['image_url'],
+            cloudinary_id=request_body['cloudinary_id'],
+            created_at=created_at
+        ):
+            logger.info("Image saved successfully")
+            return {
+                "status": "success",
+                "message": "Image saved successfully"
+            }
+        else:
+            logger.error("Failed to save image")
+            return {
+                "status": "error",
+                "message": "Failed to save image to database"
+            }
+            
+    except Exception as e:
+        logger.error(f"Error in save_image endpoint: {str(e)}")
         return {"status": "error", "message": f"Server error: {str(e)}"}
 

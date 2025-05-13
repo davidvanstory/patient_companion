@@ -31,6 +31,7 @@ try:
     symptoms_collection = db['symptoms']
     appointments_collection = db['appointments']
     temperature_collection = db['temperature']
+    images_collection = db['user_images']
 
 except PyMongoError as e:
     logger.error(f"Failed to connect to MongoDB: {e}")
@@ -359,4 +360,30 @@ def save_appointment(note: str) -> bool:
     if result.inserted_id:
         return True
     else:
+        return False
+
+def save_user_image(phone_number: str, image_url: str, cloudinary_id: str, created_at: datetime.datetime) -> bool:
+    try:
+        logger.info(f"Attempting to save image for user: {phone_number}")
+        
+        document = {
+            "phone_number": phone_number,
+            "image_url": image_url,
+            "cloudinary_id": cloudinary_id,
+            "created_at": created_at
+        }
+        logger.info(f"Inserting image document: {document}")
+        
+        result = images_collection.insert_one(document)
+        if result.inserted_id:
+            logger.info(f"Image saved successfully with ID: {result.inserted_id}")
+            return True
+        else:
+            logger.warning("Failed to save image, no inserted_id returned")
+            return False
+    except PyMongoError as e:
+        logger.error(f"MongoDB error while saving image: {e}")
+        return False
+    except Exception as e:
+        logger.error(f"Unexpected error while saving image: {e}")
         return False
