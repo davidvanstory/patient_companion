@@ -10,7 +10,7 @@ from agent.helpers import (
     User, get_user_from_db, save_user, save_symptom, get_symptom_from_db, 
     search_patient_query, update_user_name, callers_collection,
     get_user_symptoms, check_persistent_symptom, save_appointment, save_temp, get_temperature_from_db,
-    get_all_temperatures_from_db, save_user_image
+    get_all_temperatures_from_db, save_user_image, get_all_images_from_db
 )
 
 app = FastAPI()
@@ -352,6 +352,32 @@ async def get_all_temperatures() -> Dict[str, Any]:
             "status": "error",
             "message": f"Server error: {str(e)}",
             "temperatures": []
+        }
+
+@app.get("/agent/get-all-images")
+async def get_all_images() -> Dict[str, Any]:
+    try:
+        images = get_all_images_from_db()
+        print(f"Found images: {images}") 
+
+        if not images:
+            return {
+                "status": "success",
+                "message": "No images found",
+                "images": []
+            }
+            
+        return {
+            "status": "success",
+            "message": f"Retrieved {len(images)} images",
+            "images": images
+        }
+    except Exception as e:
+        logger.error(f"Error in get_all_images endpoint: {str(e)}")
+        return {
+            "status": "error",
+            "message": f"Server error: {str(e)}",
+            "images": []
         }
 
 @app.post("/agent/search")

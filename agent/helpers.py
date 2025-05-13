@@ -258,6 +258,17 @@ def get_all_temperatures_from_db() -> List[Dict[str, Any]]:
         logger.error(f"Unexpected error while retrieving temperatures: {e}")
         return []
 
+def get_all_images_from_db() -> List[Dict[str, Any]]:
+    try:
+        images = list(images_collection.find(
+            sort=[("created_at", DESCENDING)]
+        ))
+        return images
+    except PyMongoError as e:
+        logger.error(f"MongoDB error while retrieving images: {e}")
+        return []
+    
+    
 def get_user_symptoms(phone_number: str) -> List[Dict[str, Any]]:
     """
     Retrieves all symptoms for a specific user by phone number.
