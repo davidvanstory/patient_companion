@@ -4,3 +4,4 @@ pymongo
 langchain
 python-dotenv
 requests
+python-multipart
