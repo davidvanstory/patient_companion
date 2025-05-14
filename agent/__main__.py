@@ -9,6 +9,7 @@ from datetime import datetime
 import json
 import base64
 from .utils.cloudinary import cloudinary
+import os
 
 
 from agent.helpers import (
@@ -17,6 +18,10 @@ from agent.helpers import (
     get_user_symptoms, check_persistent_symptom, save_appointment, save_temp, get_temperature_from_db,
     get_all_temperatures_from_db, save_user_image, get_all_images_from_db, save_pain, get_all_pains_from_db, save_text
 )
+
+# Add Twilio credentials
+TWILIO_ACCOUNT_SID = os.environ.get('TwilioAccountSID')
+TWILIO_AUTH_TOKEN = os.environ.get('TwilioAuthToken')
 
 app = FastAPI()
 
@@ -554,9 +559,9 @@ async def twilio_webhook(request: Request) -> Response:
                 logger.warning(f"Missing media URL for item {i}")
                 continue
             
-            # Download the media file
+            # Download the media file with Twilio authentication
             logger.info(f"Downloading media from {media_url}")
-            response = requests.get(media_url)
+            response = requests.get(media_url, auth=(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN))
             if not response.ok:
                 logger.error(f"Failed to download media: {response.status_code}")
                 continue
