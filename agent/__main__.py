@@ -499,11 +499,15 @@ async def get_all_pains() -> Dict[str, Any]:
             "message": f"Server error: {str(e)}",
             "pains": []
         }
-    
+
+
 @app.post("/agent/incoming-text")
 async def incoming_text(request: Request) -> Dict[str, Any]:
     try:
         request_body = await request.json()
+        # Log the entire request body
+        logger.info(f"Request body received: {request_body}")
+        
         text = request_body['text']
         phone_number = request_body.get('phone_number')  # Optional, if you want to associate with user
 
@@ -521,5 +525,3 @@ async def incoming_text(request: Request) -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"Error saving text: {str(e)}")
         return {"status": "error", "message": f"Server error: {str(e)}"}
-
-
