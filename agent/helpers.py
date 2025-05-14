@@ -33,6 +33,7 @@ try:
     temperature_collection = db['temperature']
     images_collection = db['user_images']
     pain_collection = db['pain']
+    text_collection = db['texts']
 
 except PyMongoError as e:
     logger.error(f"Failed to connect to MongoDB: {e}")
@@ -450,3 +451,31 @@ def get_all_pains_from_db() -> List[Dict[str, Any]]:
         logger.error(f"Unexpected error while retrieving pains: {e}")
         return []
     
+def save_text(text: str, phone_number: str = None) -> bool:
+    try:
+        logger.info(f"Attempting to save text: {text} for user: {phone_number}")
+        if not isinstance(text, str):
+            logger.warning(f"Invalid text format: {text}")
+            return False
+            
+        document = {
+            "text": text,
+            "phone_number": phone_number,
+            "timestamp": datetime.datetime.now()
+        }
+        logger.info(f"Inserting document: {document}")
+        
+        result = text_collection.insert_one(document)
+        if result.inserted_id:
+            logger.info(f"Text saved successfully with ID: {result.inserted_id}")
+            return True
+        else:
+            logger.warning("Failed to save Text, no inserted_id returned")
+            return False
+    except PyMongoError as e:
+        logger.error(f"MongoDB error while saving Text: {e}")
+        return False
+    except Exception as e:
+        logger.error(f"Unexpected error while saving Text: {e}")
+        return False
+      
