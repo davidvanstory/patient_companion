@@ -505,6 +505,6 @@ async def get_all_pains() -> Dict[str, Any]:
 async def incoming_text(request: Request) -> Dict[str, Any]:
     request_body = await request.json()
     print("got request body:", request_body)
-    return {}
+    return {"message": "David's text received"}
 
 
