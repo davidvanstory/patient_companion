@@ -1,5 +1,5 @@
 # patient_companion/agent/__main__.py
-# test
+#
 from fastapi import FastAPI, Request
 import requests
 from typing import Literal, Any, Dict, Union
@@ -12,7 +12,7 @@ from agent.helpers import (
     User, get_user_from_db, save_user, save_symptom, get_symptom_from_db, 
     search_patient_query, update_user_name, callers_collection,
     get_user_symptoms, check_persistent_symptom, save_appointment, save_temp, get_temperature_from_db,
-    get_all_temperatures_from_db, save_user_image, get_all_images_from_db, save_pain, get_all_pains_from_db
+    get_all_temperatures_from_db, save_user_image, get_all_images_from_db, save_pain, get_all_pains_from_db, save_text
 )
 
 app = FastAPI()
@@ -474,6 +474,7 @@ async def take_pain(request: Request) -> Dict[str, Any]:
 
 @app.get("/agent/get-all-pains")
 async def get_all_pains() -> Dict[str, Any]:
+
     try:
         pains = get_all_pains_from_db()
         print(f"Found pains: {pains}") 
@@ -498,3 +499,27 @@ async def get_all_pains() -> Dict[str, Any]:
             "message": f"Server error: {str(e)}",
             "pains": []
         }
+    
+@app.post("/agent/incoming-text")
+async def incoming_text(request: Request) -> Dict[str, Any]:
+    try:
+        request_body = await request.json()
+        text = request_body['text']
+        phone_number = request_body.get('phone_number')  # Optional, if you want to associate with user
+
+        logger.info(f"Text received: {text} for user: {phone_number}")
+        if save_text(text, phone_number):
+            return {
+                "status": "success",
+                "message": f"Text saved successfully: {text}"
+            }
+        else:
+            return {
+                "status": "error",
+                "message": "Failed to save text to database"
+            }
+    except Exception as e:
+        logger.error(f"Error saving text: {str(e)}")
+        return {"status": "error", "message": f"Server error: {str(e)}"}
+
+
