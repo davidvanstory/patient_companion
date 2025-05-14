@@ -32,6 +32,7 @@ try:
     appointments_collection = db['appointments']
     temperature_collection = db['temperature']
     images_collection = db['user_images']
+    pain_collection = db['pain']
 
 except PyMongoError as e:
     logger.error(f"Failed to connect to MongoDB: {e}")
@@ -259,7 +260,6 @@ def get_all_temperatures_from_db() -> List[Dict[str, Any]]:
         return []
 
 
-
 def get_user_symptoms(phone_number: str) -> List[Dict[str, Any]]:
     """
     Retrieves all symptoms for a specific user by phone number.
@@ -402,5 +402,51 @@ def get_all_images_from_db() -> List[Dict[str, Any]]:
         return images
     except PyMongoError as e:
         logger.error(f"MongoDB error while retrieving images: {e}")
+        return []
+    
+def save_pain(pain: float, phone_number: str = None) -> bool:
+    try:
+        logger.info(f"Attempting to save pain: {pain} for user: {phone_number}")
+        if not isinstance(pain, (int, float)):
+            logger.warning(f"Invalid pain format: {pain}")
+            return False
+            
+        document = {
+            "pain": pain,
+            "phone_number": phone_number,
+            "timestamp": datetime.datetime.now()
+        }
+        logger.info(f"Inserting document: {document}")
+        
+        result = pain_collection.insert_one(document)
+        if result.inserted_id:
+            logger.info(f"Pain saved successfully with ID: {result.inserted_id}")
+            return True
+        else:
+            logger.warning("Failed to save Pain, no inserted_id returned")
+            return False
+    except PyMongoError as e:
+        logger.error(f"MongoDB error while saving Pain: {e}")
+        return False
+    except Exception as e:
+        logger.error(f"Unexpected error while saving Pain: {e}")
+        return False
+      
+
+def get_all_pains_from_db() -> List[Dict[str, Any]]:
+    try:
+        pains = list(pain_collection.find(
+            sort=[("timestamp", DESCENDING)]
+        ))
+        for pain in pains:
+            pain['_id'] = str(pain['_id'])
+        logger.info(f"Retrieved {len(pains)} pain records")
+        print(f"Found pains: {pains}") 
+        return pains    
+    except PyMongoError as e:
+        logger.error(f"MongoDB error while retrieving pains: {e}")
+        return []
+    except Exception as e:
+        logger.error(f"Unexpected error while retrieving pains: {e}")
         return []
     

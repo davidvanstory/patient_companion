@@ -10,7 +10,7 @@ from agent.helpers import (
     User, get_user_from_db, save_user, save_symptom, get_symptom_from_db, 
     search_patient_query, update_user_name, callers_collection,
     get_user_symptoms, check_persistent_symptom, save_appointment, save_temp, get_temperature_from_db,
-    get_all_temperatures_from_db, save_user_image, get_all_images_from_db
+    get_all_temperatures_from_db, save_user_image, get_all_images_from_db, save_pain, get_all_pains_from_db
 )
 
 app = FastAPI()
@@ -313,7 +313,6 @@ async def take_temperature(request: Request) -> Dict[str, Any]:
         logger.error(f"Error saving temperature: {str(e)}")
         return {"status": "error", "message": f"Server error: {str(e)}"}
 
-
 @app.get("/agent/get-temperature")
 async def get_temperature(request: Request) -> Dict[str, Any]:
     temperature = get_temperature_from_db()
@@ -445,4 +444,55 @@ async def get_all_images() -> Dict[str, Any]:
             "status": "error",
             "message": f"Server error: {str(e)}",
             "images": []
+        }
+
+
+@app.post("/agent/take-pain")
+async def take_pain(request: Request) -> Dict[str, Any]:
+    try:
+        request_body = await request.json()
+        pain = float(request_body['pain'])
+        phone_number = request_body.get('phone_number')  # Optional, if you want to associate with user
+
+        logger.info(f"Pain received: {pain} for user: {phone_number}")
+        if save_pain(pain, phone_number):
+            return {
+                "status": "success",
+                "message": f"Pain saved successfully: {pain}°F"
+            }
+        else:
+            return {
+                "status": "error",
+                "message": "Failed to save pain to database"
+            }
+    except Exception as e:
+        logger.error(f"Error saving pain: {str(e)}")
+        return {"status": "error", "message": f"Server error: {str(e)}"}
+    
+
+@app.get("/agent/get-all-pains")
+async def get_all_pains() -> Dict[str, Any]:
+    try:
+        pains = get_all_pains_from_db()
+        print(f"Found pains: {pains}") 
+
+        if not pains:
+            print("No pain records found")
+            return {
+                "status": "success",
+                "message": "No pain records found",
+                "pains": []
+            }
+            
+        return {
+            "status": "success",
+            "message": f"Retrieved {len(pains)} pain records",
+            "pains": pains
+        }
+    except Exception as e:
+        logger.error(f"Error in get_all_pains endpoint: {str(e)}")
+        return {
+            "status": "error",
+            "message": f"Server error: {str(e)}",
+            "pains": []
         }
