@@ -561,7 +561,7 @@ async def twilio_webhook(request: Request) -> Response:
             
             # Download the media file with Twilio authentication
             logger.info(f"Downloading media from {media_url}")
-            response = requests.get(media_url, auth=HTTPBasicAuth(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN))
+            response = requests.get(media_url, auth=(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN))
             if not response.ok:
                 logger.error(f"Failed to download media: {response.status_code}")
                 continue
