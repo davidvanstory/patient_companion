@@ -10,7 +10,7 @@ import json
 import base64
 from .utils.cloudinary import cloudinary
 import os
-
+from requests.auth import HTTPBasicAuth
 
 from agent.helpers import (
     User, get_user_from_db, save_user, save_symptom, get_symptom_from_db, 
@@ -561,7 +561,7 @@ async def twilio_webhook(request: Request) -> Response:
             
             # Download the media file with Twilio authentication
             logger.info(f"Downloading media from {media_url}")
-            response = requests.get(media_url)#, auth=(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN))
+            response = requests.get(media_url, auth=HTTPBasicAuth(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN))
             if not response.ok:
                 logger.error(f"Failed to download media: {response.status_code}")
                 continue
