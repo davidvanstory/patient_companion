@@ -93,7 +93,7 @@ async def init(request: Request) -> Dict[str, Any]:
             symptoms = get_user_symptoms(caller_id)
             if symptoms:
                 print("symptoms", symptoms)
-                first_message = f"Hey {user['name']}, it's good to hear from you again. Last time we spoke we chatted about your {symptoms[0]['symptom']}. How are you feeling at the moment?"
+                first_message = f"Hey {user['name']}, it's good to hear from you again. Last time we spoke we chatted about your {symptoms[0]['symptom']}. I'm here to help you track your symptoms post operation.How is your pain at the moment?"
             else:
                 first_message = f"Hey {user['name']}"
 
