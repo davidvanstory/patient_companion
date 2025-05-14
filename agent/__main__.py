@@ -6,6 +6,7 @@ from typing import Literal, Any, Dict, Union
 import logging
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
+import json
 
 
 from agent.helpers import (
@@ -503,8 +504,20 @@ async def get_all_pains() -> Dict[str, Any]:
 
 @app.post("/agent/incoming-text")
 async def incoming_text(request: Request) -> Dict[str, Any]:
-    request_body = await request.json()
-    print("got request body:", request_body)
-    return {"message": "David's text received"}
+    try:
+        # Try to parse as JSON first
+        try:
+            request_body = await request.json()
+        except json.JSONDecodeError:
+            # If JSON parsing fails, try form data
+            form_data = await request.form()
+            request_body = dict(form_data)
+        
+        print("got request body:", request_body)
+        return {"message": "David's text received"}
+    except Exception as e:
+        logger.error(f"Error in incoming_text: {str(e)}")
+        # Return a valid response even on error
+        return {"message": "Error processing text", "error": str(e)}
 
 
