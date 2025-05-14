@@ -1,12 +1,14 @@
 # patient_companion/agent/__main__.py
 #
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 import requests
 from typing import Literal, Any, Dict, Union
 import logging
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
 import json
+import base64
+from .utils.cloudinary import cloudinary
 
 
 from agent.helpers import (
@@ -519,5 +521,98 @@ async def incoming_text(request: Request) -> Dict[str, Any]:
         logger.error(f"Error in incoming_text: {str(e)}")
         # Return a valid response even on error
         return {"message": "Error processing text", "error": str(e)}
+
+@app.post("/agent/twilio-webhook")
+async def twilio_webhook(request: Request) -> Response:
+    """
+    Handle incoming Twilio webhook requests for MMS (multimedia messaging)
+    """
+    try:
+        # Parse the form data from Twilio
+        form_data = await request.form()
+        from_number = form_data.get('From')
+        num_media = int(form_data.get('NumMedia', '0'))
+        
+        logger.info(f"Received Twilio webhook with {num_media} media items from {from_number}")
+        
+        if num_media <= 0:
+            logger.info("No media found in the message")
+            return Response(
+                content='<Response><Message>No image was found in your message.</Message></Response>',
+                media_type='text/xml',
+                status_code=200
+            )
+
+        # Process each media item
+        upload_results = []
+        
+        for i in range(num_media):
+            media_url = form_data.get(f'MediaUrl{i}')
+            content_type = form_data.get(f'MediaContentType{i}')
+            
+            if not media_url:
+                logger.warning(f"Missing media URL for item {i}")
+                continue
+            
+            # Download the media file
+            logger.info(f"Downloading media from {media_url}")
+            response = requests.get(media_url)
+            if not response.ok:
+                logger.error(f"Failed to download media: {response.status_code}")
+                continue
+            
+            # Convert to base64 for Cloudinary
+            base64_image = base64.b64encode(response.content).decode('utf-8')
+            data_uri = f"data:{content_type};base64,{base64_image}"
+            
+            # Upload to Cloudinary
+            try:
+                logger.info("Uploading to Cloudinary")
+                cloudinary_response = cloudinary.uploader.upload(
+                    data_uri, 
+                    folder='patient-images',
+                    context={'phone_number': from_number}
+                )
+                
+                logger.info(f"✅ MMS image uploaded to Cloudinary: {cloudinary_response.get('secure_url')}")
+                
+                # Save to database using your existing save_user_image function
+                if save_user_image(
+                    phone_number=from_number,
+                    image_url=cloudinary_response.get('secure_url'),
+                    cloudinary_id=cloudinary_response.get('public_id'),
+                    created_at=datetime.now()
+                ):
+                    upload_results.append(cloudinary_response.get('secure_url'))
+                    logger.info("Image saved to database successfully")
+                else:
+                    logger.error("Failed to save MMS image to database")
+            
+            except Exception as e:
+                logger.error(f"Cloudinary upload error: {str(e)}")
+        
+        # Return success response to Twilio
+        if upload_results:
+            logger.info(f"Successfully processed {len(upload_results)} images")
+            return Response(
+                content='<Response><Message>Your image was uploaded successfully!</Message></Response>',
+                media_type='text/xml',
+                status_code=200
+            )
+        else:
+            logger.warning("No images were successfully processed")
+            return Response(
+                content='<Response><Message>We received your message, but could not process the images. Please try again.</Message></Response>',
+                media_type='text/xml',
+                status_code=200
+            )
+            
+    except Exception as e:
+        logger.error(f"Error processing Twilio MMS: {str(e)}")
+        return Response(
+            content='<Response><Message>Sorry, we couldn\'t process your image. Please try again later.</Message></Response>',
+            media_type='text/xml',
+            status_code=200
+        )
 
 
