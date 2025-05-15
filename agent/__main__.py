@@ -99,7 +99,7 @@ To start, may I have your name?"""
                 print("symptoms", symptoms)
                 first_message = (
                 f"""Hey {user['name']}, My name is Juni, I'm here to help you track your symptoms and infection after your knee surgery. 
-                 To start, can you tell me how much pain you're in on a scale of 1 to 10, your temperature? and anything else you're feeling?"""
+                 To start, can you tell me how much pain you're in on a scale of 1 to 10, and your current body temperature?"""
                 )
             else:
                 first_message = f"Hey {user['name']}"
