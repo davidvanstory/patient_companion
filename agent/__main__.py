@@ -302,10 +302,16 @@ async def take_symptom(request: Request) -> Dict[str, Any]:
 @app.get("/agent/get-symptom")
 async def get_symptom(request: Request) -> dict[str, str]:
     note = get_symptom_from_db()
-    print("got note:", note)
-    return {
-        "note": note
-    }
+    if note and "error" not in note.lower():
+        return {
+            "status": "success",
+            "symptom": note
+        }
+    else:
+        return {
+            "status": "error",
+            "message": note or "No symptom data available"
+        }
 
 # added for temp taking
 @app.post("/agent/take-temperature")
