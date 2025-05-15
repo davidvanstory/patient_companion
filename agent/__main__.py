@@ -62,9 +62,11 @@ async def init(request: Request) -> Dict[str, Any]:
         logger.info(f"Initializing user with caller_id: {caller_id}")
         
         user: User | None = get_user_from_db(phone_number=caller_id)
-        first_message = f"Hey there, I'm Momsen, your health companion. 
-        I can help you track your symptoms, and answer medical questions you may have. 
-        To start, may I have your name?"
+        first_message = (
+            f"""Hey there, I'm Momsen, your health companion.
+I can help you track your symptoms, and answer medical questions you may have.
+To start, may I have your name?"""
+        )
 
         if not user:
             # Use a consistent name in both database and response
@@ -95,9 +97,11 @@ async def init(request: Request) -> Dict[str, Any]:
             symptoms = get_user_symptoms(caller_id)
             if symptoms:
                 print("symptoms", symptoms)
-                first_message = f"Hey {user['name']}, My name is Juni, I'm here to help you track your symptoms and infection after your knee operation. 
+                first_message = (
+                f"""Hey {user['name']}, My name is Juni, I'm here to help you track your symptoms and infection after your knee operation. 
                 Tell me how you're feeling today. To start, can you tell me how much pain you're in on a scale of 1-10, and what's your temperature? 
-                Please take a photo of your knee and send it to me."
+                Please take a photo of your knee and send it to me."""
+                )
             else:
                 first_message = f"Hey {user['name']}"
 
@@ -258,7 +262,7 @@ async def take_symptom(request: Request) -> Dict[str, Any]:
             latest_user = callers_collection.find_one(sort=[("_id", -1)])
             if latest_user:
                 caller_id = latest_user.get("phone_number")
-                logger.info(f"Using most recent caller ID: {caller_id}")
+                
         
         logger.info(f"Final caller_id to be used: {caller_id}")
         
